@@ -7,7 +7,7 @@ import { useSupabase } from "@/hooks/useSupabase";
 import { SupabaseProvider } from "@/providers/supabase-provider";
 import { PortalHost } from '@rn-primitives/portal';
 
-import "./globals.css"
+import "../global.css"
 
 SplashScreen.setOptions({
   duration: 500,

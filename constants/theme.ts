@@ -1,21 +1,59 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Spectra App Theme
+ * Premium color palette with glassmorphism support
  */
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
+// Spectra Color Palette
+export const SpectraColors = {
+  // Primary Colors
+  primary: {
+    main: '#7371fc',
+    variant1: '#7472fd',
+    variant2: '#7470fc',
+  },
+  // Card/Surface Colors
+  surface: {
+    card: '#e6d9f2',
+    secondary: '#e4daf2',
+    alternate: '#e6d8f4',
+    accent: '#e7daf3',
+  },
+  // Background
+  background: {
+    main: '#f4effe',
+    white: '#ffffff',
+  },
+  // Text Colors
+  text: {
+    primary: '#2d2d2d',
+    secondary: '#6b6b6b',
+    light: '#9b9b9b',
+    white: '#ffffff',
+  },
+  // Glassmorphism
+  glass: {
+    light: 'rgba(255, 255, 255, 0.7)',
+    medium: 'rgba(255, 255, 255, 0.5)',
+    dark: 'rgba(115, 113, 252, 0.1)',
+    card: 'rgba(230, 217, 242, 0.6)',
+  },
+};
+
+const tintColorLight = SpectraColors.primary.main;
 const tintColorDark = '#fff';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
+    text: SpectraColors.text.primary,
+    background: SpectraColors.background.main,
     tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
+    icon: SpectraColors.text.secondary,
+    tabIconDefault: SpectraColors.text.light,
     tabIconSelected: tintColorLight,
+    card: SpectraColors.surface.card,
+    primary: SpectraColors.primary.main,
   },
   dark: {
     text: '#ECEDEE',
@@ -24,6 +62,8 @@ export const Colors = {
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
+    card: '#2a2a2a',
+    primary: SpectraColors.primary.main,
   },
 };
 
