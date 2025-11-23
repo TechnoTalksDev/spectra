@@ -1,24 +1,45 @@
-import { NativeTabs, Label } from "expo-router/unstable-native-tabs";
+import { Tabs } from "expo-router";
 import { SpectraColors } from "@/constants/theme";
 import { AppIcon } from "@/components/ui/app-icon";
 
 export default function TabsLayout() {
   return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Label>Home</Label>
-        <AppIcon name="home" size={24} color={SpectraColors.primary.main} />
-      </NativeTabs.Trigger>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: SpectraColors.primary.main,
+        tabBarInactiveTintColor: SpectraColors.text.light,
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Home",
+          tabBarIcon: ({ color, size }) => (
+            <AppIcon name="home" size={size} color={color} />
+          ),
+        }}
+      />
       
-      <NativeTabs.Trigger name="vision">
-        <Label>Vision</Label>
-        <AppIcon name="eye" size={24} color={SpectraColors.primary.main} />
-      </NativeTabs.Trigger>
+      <Tabs.Screen
+        name="vision"
+        options={{
+          title: "Vision",
+          tabBarIcon: ({ color, size }) => (
+            <AppIcon name="eye" size={size} color={color} />
+          ),
+        }}
+      />
       
-      <NativeTabs.Trigger name="profile">
-        <Label>Profile</Label>
-        <AppIcon name="person" size={24} color={SpectraColors.primary.main} />
-      </NativeTabs.Trigger>
-    </NativeTabs>
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ color, size }) => (
+            <AppIcon name="person" size={size} color={color} />
+          ),
+        }}
+      />
+    </Tabs>
   );
 }

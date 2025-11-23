@@ -1,6 +1,6 @@
 /**
  * Spectra App Theme
- * Premium color palette with glassmorphism support
+ * Clean and premium color palette
  */
 
 import { Platform } from 'react-native';
@@ -15,29 +15,22 @@ export const SpectraColors = {
   },
   // Card/Surface Colors
   surface: {
-    card: '#e6d9f2',
-    secondary: '#e4daf2',
-    alternate: '#e6d8f4',
-    accent: '#e7daf3',
+    card: '#f8f7ff',
+    secondary: '#fafafa',
+    alternate: '#f5f5f5',
+    accent: '#eeeeee',
   },
   // Background
   background: {
-    main: '#f4effe',
+    main: '#ffffff',
     white: '#ffffff',
   },
   // Text Colors
   text: {
-    primary: '#2d2d2d',
-    secondary: '#6b6b6b',
-    light: '#9b9b9b',
+    primary: '#1a1a1a',
+    secondary: '#666666',
+    light: '#999999',
     white: '#ffffff',
-  },
-  // Glassmorphism
-  glass: {
-    light: 'rgba(255, 255, 255, 0.7)',
-    medium: 'rgba(255, 255, 255, 0.5)',
-    dark: 'rgba(115, 113, 252, 0.1)',
-    card: 'rgba(230, 217, 242, 0.6)',
   },
 };
 

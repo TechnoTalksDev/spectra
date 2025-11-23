@@ -6,11 +6,10 @@ import {
   ActivityIndicator,
   TouchableOpacityProps,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { SpectraColors } from '@/constants/theme';
 
-interface GlassButtonProps extends TouchableOpacityProps {
+interface ButtonProps extends TouchableOpacityProps {
   title: string;
   variant?: 'primary' | 'secondary' | 'ghost';
   size?: 'small' | 'medium' | 'large';
@@ -28,7 +27,7 @@ export function GlassButton({
   disabled,
   style,
   ...props
-}: GlassButtonProps) {
+}: ButtonProps) {
   const handlePress = async (e: any) => {
     if (hapticFeedback) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -36,28 +35,29 @@ export function GlassButton({
     onPress?.(e);
   };
 
-  const getGradientColors = (): [string, string] => {
+  const getBackgroundColor = () => {
+    if (disabled) return '#cccccc';
     switch (variant) {
       case 'primary':
-        return [SpectraColors.primary.main, SpectraColors.primary.variant2];
+        return SpectraColors.primary.main;
       case 'secondary':
-        return ['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.8)'];
+        return '#ffffff';
       case 'ghost':
-        return ['rgba(255, 255, 255, 0.2)', 'rgba(255, 255, 255, 0.08)'];
+        return 'transparent';
       default:
-        return [SpectraColors.primary.main, SpectraColors.primary.variant2];
+        return SpectraColors.primary.main;
     }
   };
 
   const sizeStyles = {
-    small: { height: 46, paddingHorizontal: 20 },
-    medium: { height: 54, paddingHorizontal: 28 },
-    large: { height: 58, paddingHorizontal: 32 },
+    small: { height: 44, paddingHorizontal: 20 },
+    medium: { height: 52, paddingHorizontal: 24 },
+    large: { height: 56, paddingHorizontal: 28 },
   };
 
   const textSizeStyles = {
     small: { fontSize: 14 },
-    medium: { fontSize: 16 },
+    medium: { fontSize: 15 },
     large: { fontSize: 16 },
   };
 
@@ -65,56 +65,54 @@ export function GlassButton({
     ? SpectraColors.primary.main
     : variant === 'secondary'
     ? SpectraColors.primary.main
-    : SpectraColors.text.white;
+    : '#ffffff';
 
   return (
     <TouchableOpacity
       onPress={handlePress}
       disabled={disabled || loading}
-      activeOpacity={0.8}
-      style={[styles.container, sizeStyles[size], disabled && styles.disabled, style]}
+      activeOpacity={0.7}
+      style={[
+        styles.container, 
+        sizeStyles[size], 
+        { backgroundColor: getBackgroundColor() },
+        variant === 'secondary' && styles.secondary,
+        style
+      ]}
       {...props}
     >
-      <LinearGradient
-        colors={getGradientColors()}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.gradient}
-      >
-        {loading ? (
-          <ActivityIndicator color={textColor} />
-        ) : (
-          <Text style={[styles.text, textSizeStyles[size], { color: textColor }]}>
-            {title}
-          </Text>
-        )}
-      </LinearGradient>
+      {loading ? (
+        <ActivityIndicator color={textColor} />
+      ) : (
+        <Text style={[
+          styles.text, 
+          textSizeStyles[size], 
+          { color: textColor },
+          disabled && { color: '#999999' }
+        ]}>
+          {title}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    shadowColor: SpectraColors.primary.main,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  gradient: {
-    flex: 1,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  secondary: {
+    borderWidth: 1.5,
+    borderColor: SpectraColors.primary.main,
   },
   text: {
     fontWeight: '600',
-    letterSpacing: 0.3,
-  },
-  disabled: {
-    opacity: 0.5,
   },
 });

@@ -23,6 +23,7 @@ import { AnimatedBackground } from '@/components/ui/animated-background';
 import { GlassInput } from '@/components/ui/glass-input';
 import { GlassButton } from '@/components/ui/glass-button';
 import { GlassCard } from '@/components/ui/glass-card';
+import { SpectraLogo } from '@/components/ui/spectra-logo';
 import { SpectraColors } from '@/constants/theme';
 import { useSignUp } from '@/hooks/useSignUp';
 
@@ -202,7 +203,7 @@ export default function Page() {
             <GlassCard variant="surface" style={styles.card}>
               <View style={styles.cardContent}>
                 <View style={styles.iconContainer}>
-                  <Text style={styles.icon}>👁️</Text>
+                  <SpectraLogo size={48} />
                 </View>
 
                 <GlassInput
