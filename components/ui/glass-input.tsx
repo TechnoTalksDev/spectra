@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { SpectraColors } from '@/constants/theme';
+import { useTheme } from '@/context/theme-context';
 
 interface GlassInputProps extends TextInputProps {
   label?: string;
@@ -29,6 +29,7 @@ export function GlassInput({
   style,
   ...props
 }: GlassInputProps) {
+  const { colors, isDark } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
 
   const handleFocus = async (e: any) => {
@@ -46,18 +47,25 @@ export function GlassInput({
 
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text style={[styles.label, { color: colors.text.primary }]}>{label}</Text>}
       <View
         style={[
           styles.inputContainer,
-          isFocused && styles.inputContainerFocused,
+          {
+            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.7)',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(230, 217, 242, 0.5)',
+          },
+          isFocused && {
+            borderColor: colors.primary.main,
+            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.9)',
+          },
           error && styles.inputContainerError,
         ]}
       >
         {leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
         <TextInput
-          style={[styles.input, style]}
-          placeholderTextColor={SpectraColors.text.light}
+          style={[styles.input, { color: colors.text.primary }, style]}
+          placeholderTextColor={colors.text.light}
           onFocus={handleFocus}
           onBlur={handleBlur}
           {...props}
@@ -76,29 +84,21 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: SpectraColors.text.primary,
     marginBottom: 8,
     marginLeft: 4,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: 'rgba(230, 217, 242, 0.5)',
     paddingHorizontal: 16,
     minHeight: 56,
-    shadowColor: SpectraColors.primary.main,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
-  },
-  inputContainerFocused: {
-    borderColor: SpectraColors.primary.main,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    shadowOpacity: 0.15,
   },
   inputContainerError: {
     borderColor: '#ff6b6b',
@@ -106,7 +106,6 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: SpectraColors.text.primary,
     paddingVertical: 12,
   },
   iconLeft: {

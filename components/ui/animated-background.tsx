@@ -1,18 +1,28 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { SpectraColors } from '@/constants/theme';
+import React, { useRef, useEffect } from 'react';
+import { Animated, StyleSheet } from 'react-native';
+import { useTheme } from '@/context/theme-context';
 
 export function AnimatedBackground({ children }: { children: React.ReactNode }) {
+  const { colors } = useTheme();
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 350,
+      useNativeDriver: true,
+    }).start();
+  }, [opacity]);
+
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container, { opacity, backgroundColor: colors.background.main }]}>
       {children}
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: SpectraColors.background.main,
   },
 });

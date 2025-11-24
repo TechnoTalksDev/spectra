@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ViewProps } from 'react-native';
-import { SpectraColors } from '@/constants/theme';
+import { useTheme } from '@/context/theme-context';
 
 interface CardProps extends ViewProps {
   children: React.ReactNode;
@@ -13,14 +13,16 @@ export function GlassCard({
   style, 
   ...props 
 }: CardProps) {
+  const { colors, isDark } = useTheme();
+  
   const getBackgroundColor = () => {
     switch (variant) {
       case 'primary':
-        return SpectraColors.surface.card;
+        return colors.surface.card;
       case 'surface':
-        return '#ffffff';
+        return colors.surface.secondary;
       default:
-        return '#ffffff';
+        return colors.surface.secondary;
     }
   };
 
@@ -28,7 +30,11 @@ export function GlassCard({
     <View 
       style={[
         styles.container, 
-        { backgroundColor: getBackgroundColor() },
+        { 
+          backgroundColor: getBackgroundColor(),
+          borderWidth: isDark ? 1 : 0,
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+        },
         style
       ]} 
       {...props}
