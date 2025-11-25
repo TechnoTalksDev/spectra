@@ -10,7 +10,8 @@
 - 👆 **Haptic Feedback** - Tactile responses for better accessibility
 - 🔐 **Secure Authentication** - Email verification with Supabase
 - 📱 **Native Feel** - Built with React Native and Expo for iOS and Android
-- 🎯 **AI Vision** (Coming Soon) - Real-time visual assistance powered by GPT-4 Vision
+- 🎯 **AI Vision** - Visual assistance powered by GPT-4 Vision
+- 🎙️ **Voice Interaction** - Real-time voice conversations with GPT-4 Realtime API using WebRTC
 
 ## Get Started
 
@@ -20,6 +21,8 @@
    ```bash
    EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
    EXPO_PUBLIC_SUPABASE_KEY=your_supabase_key
+   EXPO_PUBLIC_OPENAI_REALTIME_ENDPOINT=https://api.openai.com/v1/realtime
+   EXPO_PUBLIC_OPENAI_REALTIME_KEY=your_openai_api_key
    ```
 
 2. **Install dependencies**
@@ -86,10 +89,10 @@ See [UI Components Documentation](./docs/UI_COMPONENTS.md) for detailed usage.
 - [x] Haptic Feedback Integration
 - [x] Home Dashboard
 - [x] Profile Page
-- [ ] AI Vision Implementation (GPT-4 Vision)
-- [ ] Real-time Camera Feed
-- [ ] Voice Feedback
-- [ ] Object Recognition
+- [x] AI Vision Implementation (GPT-4 Vision)
+- [x] Real-time Camera Feed
+- [x] Realtime Voice Interaction (GPT-4 Realtime API)
+- [ ] Object Recognition Enhancement
 - [ ] Custom Email Templates (Supabase)
 
 ## Docs
