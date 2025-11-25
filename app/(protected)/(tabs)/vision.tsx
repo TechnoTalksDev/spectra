@@ -56,6 +56,7 @@ export default function VisionPage() {
   const [mode, setMode] = useState<VisionMode>('quick');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [snapshotCountdown, setSnapshotCountdown] = useState(15);
   const cameraRef = useRef<CameraView>(null);
   
   // Realtime Session State
@@ -81,6 +82,48 @@ export default function VisionPage() {
       }
     };
   }, [isSessionActive]);
+
+  // Take automatic snapshot
+  const takeAutoSnapshot = async (): Promise<string | null> => {
+    if (!cameraRef.current) return null;
+
+    try {
+      const photo = await cameraRef.current.takePictureAsync({ 
+        base64: true, 
+        quality: 0.25
+      });
+      
+      if (photo?.base64) {
+        // Calculate size in MB (base64 string length * 0.75 / 1024 / 1024)
+        const sizeInBytes = photo.base64.length * 0.75;
+        const sizeInMB = (sizeInBytes / (1024 * 1024)).toFixed(2);
+        console.log(`[Auto-Snapshot] Image captured: ${sizeInMB} MB`);
+        return photo.base64;
+      }
+      
+      return null;
+    } catch (err) {
+      console.error('[Auto-Snapshot] Error:', err);
+      return null;
+    }
+  };
+
+  // Auto-snapshot every 15 seconds
+  // useEffect(() => {
+  //   if (capturedImage) return; // Only run when camera is active
+
+  //   const interval = setInterval(() => {
+  //     setSnapshotCountdown((prev) => {
+  //       if (prev <= 1) {
+  //         takeAutoSnapshot();
+  //         return 15; // Reset countdown
+  //       }
+  //       return prev - 1;
+  //     });
+  //   }, 1000);
+
+  //   return () => clearInterval(interval);
+  // }, [capturedImage]);
 
   // Handle OpenAI Realtime Events
   const handleOpenAIEvent = (event: MessageEvent) => {
@@ -510,6 +553,7 @@ export default function VisionPage() {
             ref={cameraRef}
             style={styles.camera}
             facing={cameraType}
+            animateShutter={false}
           />
         )}
 
@@ -523,6 +567,13 @@ export default function VisionPage() {
             />
             <Text style={styles.modeText}>{mode.charAt(0).toUpperCase() + mode.slice(1)}</Text>
           </View> */}
+
+          {/* Auto-Snapshot Countdown */}
+          {/* {!capturedImage && (
+            <View style={[styles.countdownBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.3)' }]}>
+              <Text style={styles.countdownText}>{snapshotCountdown}</Text>
+            </View>
+          )} */}
 
           <View style={styles.topRightButtons}>
             {!capturedImage && (
@@ -727,6 +778,19 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  countdownBadge: {
+    minWidth: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  countdownText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
   },
   processingOverlay: {
     position: 'absolute',
