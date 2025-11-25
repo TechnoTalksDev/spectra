@@ -2,8 +2,7 @@ import { AppIcon } from '@/components/ui/app-icon';
 import { GlassButton } from '@/components/ui/glass-button';
 import { useTheme } from '@/context/theme-context';
 import { useVision } from '@/hooks/useVision';
-import { useVisionHistory } from '@/hooks/useVisionHistory';
-import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from 'expo-audio';
+import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
 import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -50,7 +49,6 @@ export default function VisionPage() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { analyze, analyzeWithQuestion, speak, stopSpeaking, analyzing, result, error, speaking } = useVision();
-  const { saveToHistory } = useVisionHistory();
   
   const [permission, requestPermission] = useCameraPermissions();
   const [micPermission, setMicPermission] = useState<{ granted: boolean } | null>(null);
@@ -94,24 +92,10 @@ export default function VisionPage() {
 
       switch (type) {
         case 'session.created':
-          console.log('[Session] Created:', message);
-          // Send session update with instructions
-          if (dataChannelRef.current && dataChannelRef.current.readyState === 'open') {
-            const sessionUpdate = {
-              type: 'session.update',
-              session: {
-                instructions: REALTIME_SYSTEM_PROMPT,
-                voice: 'alloy',
-                input_audio_format: 'pcm16',
-                output_audio_format: 'pcm16',
-                turn_detection: {
-                  type: 'server_vad',
-                },
-              },
-            };
-            dataChannelRef.current.send(JSON.stringify(sessionUpdate));
-            console.log('[Session] Instructions sent');
-          }
+          console.log('[Session] Created successfully');
+          console.log('[Session] Model:', message.session?.model);
+          console.log('[Session] Instructions already configured via ephemeral token');
+          // No need to send session.update - configuration was set during ephemeral token request
           break;
         
         case 'session.updated':
@@ -178,6 +162,14 @@ export default function VisionPage() {
       setIsConnecting(true);
       console.log('[Session] Starting...');
 
+      // Configure audio mode to use speaker instead of earpiece
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: true,
+        shouldPlayInBackground: false,
+      });
+      console.log('[Audio] Configured for speaker output');
+
       // 1. Create RTCPeerConnection
       const pc = new RTCPeerConnection(RTC_CONFIGURATION);
       peerConnectionRef.current = pc;
@@ -234,7 +226,7 @@ export default function VisionPage() {
       await pc.setLocalDescription(offer);
       console.log('[SDP] Local description set');
 
-      // 7. Send SDP to OpenAI
+      // 7. Get ephemeral token and send SDP to Azure/OpenAI
       const endpoint = process.env.EXPO_PUBLIC_OPENAI_REALTIME_ENDPOINT || 'https://api.openai.com/v1/realtime';
       const apiKey = process.env.EXPO_PUBLIC_OPENAI_REALTIME_KEY;
 
@@ -242,21 +234,81 @@ export default function VisionPage() {
         throw new Error('EXPO_PUBLIC_OPENAI_REALTIME_KEY is not set');
       }
 
-      const model = 'gpt-4o-realtime-preview-2024-12-17';
-      const url = `${endpoint}?model=${model}`;
+      // Detect if using Azure OpenAI or regular OpenAI
+      const isAzure = endpoint.includes('azure.com') || endpoint.includes('cognitiveservices.azure.com');
+      
+      let ephemeralToken = apiKey;
+      let url = endpoint;
 
-      console.log('[API] Connecting to OpenAI...');
+      if (isAzure) {
+        console.log('[API] Using Azure OpenAI endpoint');
+        
+        // Step 1: Get ephemeral token from Azure
+        const resourceUrl = endpoint.split('/openai/')[0];
+        const deploymentMatch = endpoint.match(/deployment=([^&]+)/);
+        const deploymentName = deploymentMatch ? deploymentMatch[1] : 'gpt-realtime-mini';
+        
+        const tokenUrl = `${resourceUrl}/openai/v1/realtime/client_secrets`;
+        console.log('[Token] Requesting ephemeral token from:', tokenUrl);
+        
+        const tokenResponse = await fetch(tokenUrl, {
+          method: 'POST',
+          headers: {
+            'api-key': apiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            session: {
+              type: 'realtime',
+              model: deploymentName,
+              instructions: REALTIME_SYSTEM_PROMPT,
+              audio: {
+                output: {
+                  voice: 'alloy',
+                },
+              },
+            },
+          }),
+        });
+
+        if (!tokenResponse.ok) {
+          const errorText = await tokenResponse.text();
+          console.error('[Token] Error response:', errorText);
+          throw new Error(`Failed to get ephemeral token: ${tokenResponse.status} - ${errorText}`);
+        }
+
+        const tokenData = await tokenResponse.json();
+        ephemeralToken = tokenData.value;
+        console.log('[Token] Ephemeral token received:', ephemeralToken ? `${ephemeralToken.substring(0, 10)}...` : 'NONE');
+      } else {
+        // Regular OpenAI
+        console.log('[API] Using OpenAI endpoint');
+        const model = 'gpt-4o-realtime-preview-2024-12-17';
+        url = `${endpoint}?model=${model}`;
+      }
+
+      // Step 2: Send SDP offer with ephemeral token
+      console.log('[API] Connecting to realtime endpoint...');
+      console.log('[API] URL:', url);
+      console.log('[API] SDP Offer length:', offer.sdp?.length);
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/sdp',
+        'Authorization': `Bearer ${ephemeralToken}`,
+      };
+
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/sdp',
-        },
+        headers,
         body: offer.sdp,
       });
 
+      console.log('[API] Response status:', response.status, response.statusText);
+
       if (!response.ok) {
-        throw new Error(`Failed to connect: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('[API] Error response:', errorText);
+        throw new Error(`Failed to connect: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const remoteSDP = await response.text();
@@ -333,9 +385,8 @@ export default function VisionPage() {
         setCapturedImage(photo.uri);
         const analysisResult = await analyze(photo.base64, mode);
         
-        // Save to history
         if (analysisResult) {
-          await saveToHistory(analysisResult, mode, photo.uri);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
       }
     } catch (err) {
@@ -361,9 +412,8 @@ export default function VisionPage() {
         setIsProcessing(true);
         const analysisResult = await analyze(result.assets[0].base64, mode);
         
-        // Save to history
         if (analysisResult) {
-          await saveToHistory(analysisResult, mode, result.assets[0].uri);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
         
         setIsProcessing(false);

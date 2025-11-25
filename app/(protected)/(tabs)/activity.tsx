@@ -1,20 +1,20 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { AnimatedBackground } from '@/components/ui/animated-background';
-import { GlassCard } from '@/components/ui/glass-card';
 import { AppIcon } from '@/components/ui/app-icon';
+import { GlassCard } from '@/components/ui/glass-card';
 import { useTheme } from '@/context/theme-context';
-import { useVisionHistory } from '@/hooks/useVisionHistory';
-import { format, isToday, isThisWeek, isThisMonth, differenceInDays } from 'date-fns';
+import { differenceInDays, format, isThisMonth, isThisWeek, isToday } from 'date-fns';
+import * as Haptics from 'expo-haptics';
+import React, { useMemo } from 'react';
+import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
 export default function ActivityPage() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { history, loading } = useVisionHistory();
+  const history: any[] = []; // Mock empty history
+  const loading = false;
 
   const stats = useMemo(() => {
     const today = history.filter(item => isToday(new Date(item.created_at)));
@@ -179,7 +179,7 @@ export default function ActivityPage() {
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Analysis Modes</Text>
           <GlassCard variant="surface" style={styles.modeCard}>
-            {Object.entries(stats.modeBreakdown).map(([mode, count]) => {
+            {Object.entries(stats.modeBreakdown).map(([mode, count]: [string, any]) => {
               const percentage = stats.total > 0 ? (count / stats.total) * 100 : 0;
               const modeColors: Record<string, string> = {
                 quick: '#8b5cf6',

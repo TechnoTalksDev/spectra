@@ -1,23 +1,21 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { router } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { AnimatedBackground } from '@/components/ui/animated-background';
-import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
 import { AppIcon } from '@/components/ui/app-icon';
+import { GlassCard } from '@/components/ui/glass-card';
 import { useTheme } from '@/context/theme-context';
-import { useSupabase } from '@/hooks/useSupabase';
-import { useVisionHistory } from '@/hooks/useVisionHistory';
 import { useProfile } from '@/hooks/useProfile';
+import { useSupabase } from '@/hooks/useSupabase';
 import { format, isToday } from 'date-fns';
+import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomePage() {
   const { session } = useSupabase();
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const { history } = useVisionHistory();
+  const history: any[] = []; // Mock empty history
   const { profile } = useProfile();
   const [currentTime, setCurrentTime] = useState(new Date());
 

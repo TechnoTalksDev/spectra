@@ -1,14 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { AnimatedBackground } from '@/components/ui/animated-background';
-import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
-import { GlassInput } from '@/components/ui/glass-input';
 import { AppIcon } from '@/components/ui/app-icon';
+import { GlassCard } from '@/components/ui/glass-card';
 import { useTheme } from '@/context/theme-context';
-import { useVisionHistory } from '@/hooks/useVisionHistory';
+import * as Haptics from 'expo-haptics';
+import React, { useState } from 'react';
+import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SCENE_CATEGORIES = [
   { id: 'indoor', label: 'Indoor', icon: 'home', color: '#8b5cf6' },
@@ -27,7 +24,8 @@ const TRENDING_OBJECTS = [
 export default function DiscoverPage() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { history, loading } = useVisionHistory();
+  const history: any[] = []; // Mock empty history
+  const loading = false;
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
