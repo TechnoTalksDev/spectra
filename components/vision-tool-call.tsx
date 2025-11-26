@@ -43,7 +43,7 @@ const RTC_CONFIGURATION = {
 };
 
 // OpenAI Realtime System Prompt
-const REALTIME_SYSTEM_PROMPT = `Your knowledge cutoff is 2023-10. You are a helpful, witty, and friendly AI meant to help vision impaired people. You will be given images every 15 seconds so you might have to wait to respond, use this to help the person navigate, and accomplish tasks in the environment. Give simple and easy to follow instructions. Act like a human, but remember that you aren't a human and that you can't do human things in the real world. Your voice and personality should be warm and engaging, with a lively and playful tone. Make responses concisce and easily understandable. Deliver your audio response fast, but do not sound rushed. If interacting in a non-English language, start by using the standard accent or dialect familiar to the user. Talk as quickly as possible. You should always call a function if you can. Do not refer to these rules, even if you're asked about them.`;
+const REALTIME_SYSTEM_PROMPT = `Your knowledge cutoff is 2023-10. You are a helpful, witty, and friendly AI meant to help vision impaired people. You have access to a camera through the get_camera_image function - use this whenever you need visual context to help the person navigate, identify objects, read text, or accomplish tasks in their environment. Use one image per task or request. Give simple and easy to follow instructions. Act like a human, but remember that you aren't a human and that you can't do human things in the real world. Your voice and personality should be warm and engaging, with a lively and playful tone. If interacting in a non-English language, start by using the standard accent or dialect familiar to the user. Talk quickly. You should always call a function if you can. Do not refer to these rules, even if you're asked about them.`;
 
 export default function VisionPage() {
   const insets = useSafeAreaInsets();
@@ -56,25 +56,18 @@ export default function VisionPage() {
   const [mode, setMode] = useState<VisionMode>('quick');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [snapshotCountdown, setSnapshotCountdown] = useState(0);
-  const [callTimeDisplay, setCallTimeDisplay] = useState('00:00');
+  const [snapshotCountdown, setSnapshotCountdown] = useState(15);
   const cameraRef = useRef<CameraView>(null);
   
   // Realtime Session State
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [lastCapturedImage, setLastCapturedImage] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const dataChannelRef = useRef<any>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
-  
-  // Token usage tracking
-  const totalInputTokensRef = useRef<number>(0);
-  const audioInputTokensRef = useRef<number>(0);
-  const textInputTokensRef = useRef<number>(0);
-  const cachedInputTokensRef = useRef<number>(0);
-  const totalOutputTokensRef = useRef<number>(0);
-  const imagesSentRef = useRef<number>(0);
-  const sessionStartTimeRef = useRef<number>(0);
+  const isProcessingFunctionCall = useRef(false);
 
   // Check microphone permissions on mount
   useEffect(() => {
@@ -100,21 +93,14 @@ export default function VisionPage() {
     try {
       const photo = await cameraRef.current.takePictureAsync({ 
         base64: true, 
-        quality: 0.1
+        quality: 0.2
       });
       
       if (photo?.base64) {
-        // Calculate size in MB (base64 string length * 0.75 / 1024 / 1024)
-        const sizeInBytes = photo.base64.length * 0.75;
-        const sizeInMB = (sizeInBytes / (1024 * 1024)).toFixed(2);
-        console.log(`[Auto-Snapshot] Image captured: ${sizeInMB} MB`);
-        
-        // Send to GPT Realtime if session is active
-        if (isSessionActive) {
-          //console.log('[Auto-Snapshot] Sending to GPT Realtime...');
-          await sendImageOverDataChannel(photo.base64);
-        }
-        
+        // Calculate sizes in KB
+        const binaryKB = Math.round((photo.base64.length * 0.75) / 1024);
+        const base64KB = Math.round(photo.base64.length / 1024);
+        console.log(`📸 [Camera] Captured: ${binaryKB} KB (binary) → ${base64KB} KB (base64)`);
         return photo.base64;
       }
       
@@ -125,40 +111,107 @@ export default function VisionPage() {
     }
   };
 
-  //Auto-snapshot every 15 seconds
-  useEffect(() => {
-    if (capturedImage) return; // Only run when camera is active
+  // Auto-snapshot every 15 seconds
+  // useEffect(() => {
+  //   if (capturedImage) return; // Only run when camera is active
 
-    const interval = setInterval(() => {
-      setSnapshotCountdown((prev) => {
-        if (prev <= 1) {
-          takeAutoSnapshot();
-          return 15; // Reset countdown
-        }
-        return prev - 1;
-      });
-    }, 1000);
+  //   const interval = setInterval(() => {
+  //     setSnapshotCountdown((prev) => {
+  //       if (prev <= 1) {
+  //         takeAutoSnapshot();
+  //         return 15; // Reset countdown
+  //       }
+  //       return prev - 1;
+  //     });
+  //   }, 1000);
 
-    return () => clearInterval(interval);
-  }, [capturedImage, isSessionActive]); // Add isSessionActive to dependencies
+  //   return () => clearInterval(interval);
+  // }, [capturedImage]);
 
-  // Update call time display every second during active session
-  useEffect(() => {
-    if (!isSessionActive || sessionStartTimeRef.current === 0) {
-      setCallTimeDisplay('00:00');
+  // Handle camera image requests from the model
+  const handleCameraImageRequest = async (callId: string, itemId: string) => {
+    // Prevent concurrent function calls
+    if (isProcessingFunctionCall.current) {
+      console.log('[Camera] Already processing a function call, ignoring duplicate');
       return;
     }
-
-    const interval = setInterval(() => {
-      const elapsedSeconds = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000);
-      const minutes = Math.floor(elapsedSeconds / 60);
-      const seconds = elapsedSeconds % 60;
-      const formatted = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-      setCallTimeDisplay(formatted);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isSessionActive]);
+    
+    isProcessingFunctionCall.current = true;
+    
+    try {
+      console.log('[Camera] Model requested image, call_id:', callId);
+      
+      const base64Image = await takeAutoSnapshot();
+      
+      if (!base64Image) {
+        console.error('❌ [Camera] Failed to capture image');
+        // Send error response
+        if (dataChannelRef.current && dataChannelRef.current.readyState === 'open') {
+          dataChannelRef.current.send(JSON.stringify({
+            type: 'conversation.item.create',
+            item: {
+              type: 'function_call_output',
+              call_id: callId,
+              output: JSON.stringify({ error: 'Failed to capture image from camera' }),
+            },
+          }));
+          dataChannelRef.current.send(JSON.stringify({
+            type: 'response.create',
+          }));
+        }
+        return;
+      }
+      
+      // Store image for preview and show it briefly
+      setLastCapturedImage(`data:image/jpeg;base64,${base64Image}`);
+      setShowPreview(true);
+      setTimeout(() => setShowPreview(false), 3000); // Hide after 3 seconds
+      
+      // Send the image back to the model
+      if (dataChannelRef.current && dataChannelRef.current.readyState === 'open') {
+        try {
+          const outputString = `data:image/jpeg;base64,${base64Image}`;
+          const messageSizeKB = Math.round(outputString.length / 1024);
+          console.log(`📤 [Camera] Sending ${messageSizeKB} KB to AI...`);
+          
+          // Create conversation item with function call output
+          const itemCreateMessage = JSON.stringify({
+            type: 'conversation.item.create',
+            item: {
+              type: 'function_call_output',
+              call_id: callId,
+              output: outputString,
+            },
+          });
+          
+          dataChannelRef.current.send(itemCreateMessage);
+          
+          // Wait a bit before sending response.create
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Then trigger a new response
+          dataChannelRef.current.send(JSON.stringify({
+            type: 'response.create',
+          }));
+          
+          console.log('✅ [Camera] Image sent to AI');
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch (sendError) {
+          console.error('❌ [Camera] Send error:', sendError);
+          Alert.alert('Send Error', `Failed to send image: ${sendError}`);
+        }
+      } else {
+        console.error('❌ [Camera] Data channel not open:', dataChannelRef.current?.readyState);
+      }
+    } catch (err) {
+      console.error('❌ [Camera] Error:', err);
+    } finally {
+      // Release lock after a delay to prevent rapid successive calls
+      setTimeout(() => {
+        isProcessingFunctionCall.current = false;
+      }, 1000);
+    }
+  };
 
   // Handle OpenAI Realtime Events
   const handleOpenAIEvent = (event: MessageEvent) => {
@@ -168,108 +221,60 @@ export default function VisionPage() {
 
       switch (type) {
         case 'session.created':
-          // No need to send session.update - configuration was set during ephemeral token request
+          console.log('✅ [Session] Connected - Model:', message.session?.model);
           break;
         
         case 'session.updated':
+          console.log('🔄 [Session] Configuration updated');
           break;
 
         case 'input_audio_buffer.speech_started':
-          console.log('[User] Started speaking');
+          console.log('🎤 [User] Speaking...');
           break;
 
         case 'input_audio_buffer.speech_stopped':
-          console.log('[User] Stopped speaking');
-          break;
-
-        case 'conversation.item.created':
-          break;
-
-        case 'response.created':
-          break;
-
-        case 'response.done':
-          // Track token usage
-          if (message.response?.usage) {
-            const usage = message.response.usage;
-            
-            // Track total input tokens
-            if (usage.input_tokens) {
-              totalInputTokensRef.current += usage.input_tokens;
-            }
-            
-            // Track detailed input token breakdown if available
-            if (usage.input_token_details) {
-              const details = usage.input_token_details;
-              if (details.audio_tokens) {
-                audioInputTokensRef.current += details.audio_tokens;
-              }
-              if (details.text_tokens) {
-                textInputTokensRef.current += details.text_tokens;
-              }
-              if (details.cached_tokens) {
-                cachedInputTokensRef.current += details.cached_tokens;
-              }
-            }
-            
-            // Track output tokens
-            if (usage.output_tokens) {
-              totalOutputTokensRef.current += usage.output_tokens;
-            }
-          }
-          break;
-
-        case 'response.audio.delta':
-          // Audio is automatically played through WebRTC audio track
-          break;
-
-        case 'response.audio_transcript.delta':
-        case 'response.output_audio_transcript.delta':
-          // Azure uses output_audio_transcript instead of audio_transcript
+          console.log('🎤 [User] Stopped speaking');
           break;
 
         case 'response.audio_transcript.done':
-        case 'response.output_audio_transcript.done':
-          // Agent's response transcript (Azure uses output_audio_transcript)
-          if (message.transcript) {
-            console.log('[Agent]:', message.transcript);
-          }
-          break;
-
-        case 'response.text.delta':
+          console.log('💬 [User Input]:', message.transcript);
           break;
 
         case 'response.text.done':
+          console.log('🤖 [AI Response]:', message.text);
           break;
-        
-        // Azure-specific events
-        case 'input_audio_buffer.committed':
-        case 'conversation.item.added':
-        case 'conversation.item.done':
-        case 'conversation.item.truncated':
-        case 'response.output_item.added':
-        case 'response.output_item.done':
-        case 'response.content_part.added':
-        case 'response.content_part.done':
-        case 'response.output_audio.done':
-        case 'output_audio_buffer.started':
-        case 'output_audio_buffer.stopped':
-        case 'output_audio_buffer.cleared':
-          // Silence these Azure-specific events
+
+        case 'response.function_call_arguments.done':
+          console.log('🔧 [Function Call]:', message.name, '- Args:', message.arguments || '{}');
+          if (message.name === 'get_camera_image') {
+            handleCameraImageRequest(message.call_id, message.item_id);
+          }
           break;
 
         case 'error':
-          console.error('[Error]', message.error);
+          console.error('❌ [Error]:', message.error?.message || 'Unknown error');
           Alert.alert('Realtime Error', message.error?.message || 'Unknown error');
           break;
 
-        default:
-          // Debug: log all unhandled events to discover what's being sent
-          console.log('[Unhandled Event]:', type);
+        // Silently ignore these noisy events
+        case 'conversation.item.created':
+        case 'conversation.item.added':
+        case 'response.created':
+        case 'response.done':
+        case 'response.audio.delta':
+        case 'response.audio_transcript.delta':
+        case 'response.text.delta':
+        case 'response.output_item.added':
+        case 'response.output_item.done':
+        case 'conversation.item.done':
           break;
+
+        default:
+          // Only log unexpected event types
+          console.log('⚠️ [Unknown Event]:', type);
       }
     } catch (err) {
-      console.error('[Event Parse Error]', err);
+      console.error('❌ [Event Parse Error]:', err);
     }
   };
 
@@ -322,7 +327,28 @@ export default function VisionPage() {
 
       channel.onopen = () => {
         console.log('[DataChannel] Opened');
-        sessionStartTimeRef.current = Date.now();
+        
+        // Update session with tools configuration
+        console.log('[Session] Configuring tools...');
+        channel.send(JSON.stringify({
+          type: 'session.update',
+          session: {
+            type: 'realtime',
+            tools: [
+              {
+                type: 'function',
+                name: 'get_camera_image',
+                description: 'Capture a photo from the device camera to see what the user is looking at. Use this when you need visual context to help the user navigate, identify objects, read text, or accomplish tasks in their environment. Use sparingly to conserver bandwidth. ',
+                parameters: {
+                  type: 'object',
+                  properties: {},
+                },
+              },
+            ],
+          },
+        }));
+        console.log('[Session] Tools configured');
+        
         setIsSessionActive(true);
         setIsConnecting(false);
       };
@@ -471,54 +497,7 @@ export default function VisionPage() {
 
     setIsSessionActive(false);
     setIsConnecting(false);
-    
-    // Calculate call duration
-    const callDurationSeconds = sessionStartTimeRef.current > 0 
-      ? Math.round((Date.now() - sessionStartTimeRef.current) / 1000) 
-      : 0;
-    
-    // Log token usage summary
     console.log('[Session] Stopped');
-    console.log('[Token Summary] ═══════════════════════════════════════════════════');
-    console.log('[Token Summary] CALL DURATION:', callDurationSeconds, 'seconds');
-    console.log('[Token Summary] INPUT TOKENS:');
-    console.log('[Token Summary]   Total Input:', totalInputTokensRef.current);
-    if (audioInputTokensRef.current > 0 || textInputTokensRef.current > 0) {
-      console.log('[Token Summary]   - Audio Input:', audioInputTokensRef.current);
-      console.log('[Token Summary]   - Text Input:', textInputTokensRef.current, '(may include image tokens)');
-      if (cachedInputTokensRef.current > 0) {
-        console.log('[Token Summary]   - Cached:', cachedInputTokensRef.current);
-      }
-    }
-    console.log('[Token Summary]   - Images Sent:', imagesSentRef.current, '(billed separately)');
-    console.log('[Token Summary] OUTPUT TOKENS:');
-    console.log('[Token Summary]   Total Audio Output:', totalOutputTokensRef.current);
-    
-    // Calculate costs (per 1M tokens)
-    const audioInputCost = (audioInputTokensRef.current / 1_000_000) * 10;
-    const textInputCost = (textInputTokensRef.current / 1_000_000) * 0.60;
-    const cachedInputCost = (cachedInputTokensRef.current / 1_000_000) * 0.30;
-    const audioOutputCost = (totalOutputTokensRef.current / 1_000_000) * 20;
-    
-    const totalInputCost = audioInputCost + textInputCost + cachedInputCost;
-    const totalOutputCost = audioOutputCost;
-    const totalCost = totalInputCost + totalOutputCost;
-    
-    console.log('[Token Summary] ESTIMATED COSTS:');
-    console.log('[Token Summary]   Estimated Input Cost: $' + totalInputCost.toFixed(4));
-    console.log('[Token Summary]   Estimated Output Cost: $' + totalOutputCost.toFixed(4));
-    console.log('[Token Summary]   Total Estimated Cost: $' + totalCost.toFixed(4));
-    console.log('[Token Summary] ═══════════════════════════════════════════════════');
-    
-    // Reset token counters
-    totalInputTokensRef.current = 0;
-    audioInputTokensRef.current = 0;
-    textInputTokensRef.current = 0;
-    cachedInputTokensRef.current = 0;
-    totalOutputTokensRef.current = 0;
-    imagesSentRef.current = 0;
-    sessionStartTimeRef.current = 0;
-    
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
   };
 
@@ -528,53 +507,6 @@ export default function VisionPage() {
       stopRealtimeSession();
     } else {
       startRealtimeSession();
-    }
-  };
-
-  // Send image over data channel to GPT Realtime
-  const sendImageOverDataChannel = async (base64Image: string) => {
-    const dc = dataChannelRef.current;
-    if (!dc || dc.readyState !== 'open') {
-      console.warn('[DataChannel] Not open for sending image');
-      return;
-    }
-
-    try {
-      // Build the conversation.item.create event
-      const event = {
-        type: "conversation.item.create",
-        item: {
-          type: "message",
-          role: "user",
-          content: [
-            {
-              type: "input_image",
-              image_url: `data:image/jpeg;base64,${base64Image}`,
-            },
-          ],
-        },
-      };
-
-      console.log('[Auto Snapshot] Sending Image event to GPT Realtime (size: ' + (base64Image.length / 1024).toFixed(2) + ' KB)');
-      dc.send(JSON.stringify(event));
-      imagesSentRef.current += 1;
-      console.log('[Auto-Snapshot] Image event successfully (Total images sent:', imagesSentRef.current, ')');
-
-      // // Wait before triggering response to ensure image is processed
-      // await new Promise(resolve => setTimeout(resolve, 500));
-
-      // // Send response.create to trigger the model to respond
-      // const responseEvent = {
-      //   type: "response.create",
-      //   response: {
-      //   },
-      // };
-
-      // dc.send(JSON.stringify(responseEvent));
-      // console.log('[Sent] response.create after image');
-    } catch (err) {
-      console.error('[DataChannel] Error sending image:', err);
-      Alert.alert('Image Send Failed', err instanceof Error ? err.message : 'Could not send image to AI');
     }
   };
 
@@ -722,7 +654,7 @@ export default function VisionPage() {
             ref={cameraRef}
             style={styles.camera}
             facing={cameraType}
-            animateShutter={true}
+            animateShutter={false}
           />
         )}
 
@@ -738,20 +670,11 @@ export default function VisionPage() {
           </View> */}
 
           {/* Auto-Snapshot Countdown */}
-          {!capturedImage && (
+          {/* {!capturedImage && (
             <View style={[styles.countdownBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.3)' }]}>
-              <Text style={styles.countdownText}>{snapshotCountdown}s</Text>
+              <Text style={styles.countdownText}>{snapshotCountdown}</Text>
             </View>
-          )}
-
-          {/* Centered Call Timer */}
-          {isSessionActive && (
-            <View style={styles.callTimerContainer}>
-              <View style={[styles.countdownBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.3)' }]}>
-                <Text style={styles.countdownText}>{callTimeDisplay}</Text>
-              </View>
-            </View>
-          )}
+          )} */}
 
           <View style={styles.topRightButtons}>
             {!capturedImage && (
@@ -770,6 +693,20 @@ export default function VisionPage() {
           <View style={styles.processingOverlay}>
             <ActivityIndicator size="large" color="#fff" />
             <Text style={styles.processingText}>Analyzing...</Text>
+          </View>
+        )}
+
+        {/* Image Preview Overlay */}
+        {showPreview && lastCapturedImage && (
+          <View style={styles.previewOverlay}>
+            <View style={styles.previewContainer}>
+              <Text style={styles.previewTitle}>Sending to AI...</Text>
+              <Image 
+                source={{ uri: lastCapturedImage }} 
+                style={styles.previewImage}
+                resizeMode="contain"
+              />
+            </View>
           </View>
         )}
 
@@ -933,13 +870,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
   },
-  callTimerContainer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: -1,
-  },
   topRightButtons: {
     flexDirection: 'row',
     gap: 8,
@@ -992,6 +922,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  previewOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  previewContainer: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+  },
+  previewTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+    textAlign: 'center',
+  },
+  previewImage: {
+    width: '100%',
+    height: 300,
+    borderRadius: 12,
+    backgroundColor: '#000',
   },
   bottomContainer: {
     paddingHorizontal: 20,

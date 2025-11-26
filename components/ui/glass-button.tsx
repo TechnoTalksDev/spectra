@@ -7,7 +7,7 @@ import {
   TouchableOpacityProps,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { SpectraColors } from '@/constants/theme';
+import { useTheme } from '@/context/theme-context';
 
 interface ButtonProps extends TouchableOpacityProps {
   title: string;
@@ -28,6 +28,8 @@ export function GlassButton({
   style,
   ...props
 }: ButtonProps) {
+  const { colors } = useTheme();
+  
   const handlePress = async (e: any) => {
     if (hapticFeedback) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -39,13 +41,13 @@ export function GlassButton({
     if (disabled) return '#cccccc';
     switch (variant) {
       case 'primary':
-        return SpectraColors.primary.main;
+        return colors.primary.main;
       case 'secondary':
-        return '#ffffff';
+        return colors.surface.secondary;
       case 'ghost':
         return 'transparent';
       default:
-        return SpectraColors.primary.main;
+        return colors.primary.main;
     }
   };
 
@@ -62,9 +64,9 @@ export function GlassButton({
   };
 
   const textColor = variant === 'ghost' 
-    ? SpectraColors.primary.main
+    ? colors.primary.main
     : variant === 'secondary'
-    ? SpectraColors.primary.main
+    ? colors.primary.main
     : '#ffffff';
 
   return (
@@ -76,7 +78,7 @@ export function GlassButton({
         styles.container, 
         sizeStyles[size], 
         { backgroundColor: getBackgroundColor() },
-        variant === 'secondary' && styles.secondary,
+        variant === 'secondary' && { ...styles.secondary, borderColor: colors.primary.main },
         style
       ]}
       {...props}
@@ -110,7 +112,6 @@ const styles = StyleSheet.create({
   },
   secondary: {
     borderWidth: 1.5,
-    borderColor: SpectraColors.primary.main,
   },
   text: {
     fontWeight: '600',

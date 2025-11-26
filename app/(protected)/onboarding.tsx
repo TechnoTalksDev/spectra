@@ -1,0 +1,458 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Alert,
+  Dimensions,
+} from 'react-native';
+import { router } from 'expo-router';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+  withSpring,
+  Easing,
+  interpolate,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import { AnimatedBackground } from '@/components/ui/animated-background';
+import { GlassInput } from '@/components/ui/glass-input';
+import { GlassButton } from '@/components/ui/glass-button';
+import { GlassCard } from '@/components/ui/glass-card';
+import { SpectraLogo } from '@/components/ui/spectra-logo';
+import { AppIcon } from '@/components/ui/app-icon';
+import { SpectraColors } from '@/constants/theme';
+import { useProfile } from '@/hooks/useProfile';
+
+const { width } = Dimensions.get('window');
+
+export default function OnboardingPage() {
+  const { createProfile } = useProfile();
+  
+  const [step, setStep] = useState(1);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Animations
+  const cardOpacity = useSharedValue(0);
+  const titleOpacity = useSharedValue(0);
+  const progressValue = useSharedValue(0);
+
+  useEffect(() => {
+    const timingConfig = { duration: 400, easing: Easing.out(Easing.cubic) };
+    cardOpacity.value = withDelay(100, withTiming(1, timingConfig));
+    titleOpacity.value = withDelay(200, withTiming(1, timingConfig));
+    progressValue.value = withSpring(step / 2, {
+      damping: 20,
+      stiffness: 90,
+    });
+  }, [step]);
+
+  const cardAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: cardOpacity.value,
+  }));
+
+  const titleAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: titleOpacity.value,
+  }));
+
+  const progressAnimatedStyle = useAnimatedStyle(() => {
+    const progressWidth = interpolate(progressValue.value, [0, 1], [0, 100]);
+    return {
+      width: `${progressWidth}%`,
+    };
+  });
+
+  const handleContinue = async () => {
+    if (step === 1) {
+      if (!firstName.trim()) {
+        Alert.alert('Required', 'Please enter your first name');
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        return;
+      }
+
+      if (firstName.trim().length < 3) {
+        Alert.alert('Invalid', 'First name must be at least 3 characters');
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        return;
+      }
+
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      
+      // Animate step transition
+      cardOpacity.value = withTiming(0, { duration: 200 }, () => {
+        cardOpacity.value = withTiming(1, { duration: 200 });
+      });
+      
+      setStep(2);
+    } else if (step === 2) {
+      await handleComplete();
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!firstName.trim()) {
+      Alert.alert('Required', 'Please enter your first name');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      return;
+    }
+
+    setLoading(true);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    try {
+      await createProfile({
+        first_name: firstName.trim(),
+        last_name: lastName.trim() || undefined,
+      });
+
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      // Navigate to the main app
+      router.replace('/(protected)/(tabs)');
+    } catch (err: any) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', err.message || 'Failed to create profile. Please try again.');
+      console.error('Profile creation error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBack = async () => {
+    if (step === 1) return;
+    
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    // Animate step transition
+    cardOpacity.value = withTiming(0, { duration: 200 }, () => {
+      cardOpacity.value = withTiming(1, { duration: 200 });
+    });
+    
+    setStep(step - 1);
+  };
+
+  const getStepIcon = () => {
+    if (step === 1) return 'person';
+    if (step === 2) return 'checkmark-circle';
+    return 'sparkles';
+  };
+
+  const getStepTitle = () => {
+    if (step === 1) return "What's your name?";
+    if (step === 2) return 'Almost there!';
+    return 'Welcome!';
+  };
+
+  const getStepSubtitle = () => {
+    if (step === 1) return 'Let us know what to call you';
+    if (step === 2) return 'Add a last name (optional)';
+    return 'Your profile is ready';
+  };
+
+  return (
+    <AnimatedBackground>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <Animated.View style={[styles.header, titleAnimatedStyle]}>
+            <View style={styles.logoContainer}>
+              <SpectraLogo size={56} />
+            </View>
+            <Text style={styles.welcomeText}>Welcome to Spectra</Text>
+            <Text style={styles.title}>{getStepTitle()}</Text>
+            <Text style={styles.subtitle}>{getStepSubtitle()}</Text>
+          </Animated.View>
+
+          {/* Progress Bar */}
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <Animated.View style={[styles.progressFill, progressAnimatedStyle]} />
+            </View>
+            <Text style={styles.progressText}>Step {step} of 2</Text>
+          </View>
+
+          {/* Card */}
+          <Animated.View style={cardAnimatedStyle}>
+            <GlassCard variant="surface" style={styles.card}>
+              <View style={styles.cardContent}>
+                <View style={styles.iconContainer}>
+                  <AppIcon name={getStepIcon() as any} size={48} color={SpectraColors.primary.main} />
+                </View>
+
+                {step === 1 && (
+                  <>
+                    <GlassInput
+                      label="First Name"
+                      placeholder="John"
+                      value={firstName}
+                      onChangeText={setFirstName}
+                      autoCapitalize="words"
+                      autoComplete="given-name"
+                      textContentType="givenName"
+                      autoFocus
+                    />
+                    <Text style={styles.helperText}>
+                      Minimum 3 characters required
+                    </Text>
+                  </>
+                )}
+
+                {step === 2 && (
+                  <>
+                    <View style={styles.summaryContainer}>
+                      <Text style={styles.summaryLabel}>First Name</Text>
+                      <Text style={styles.summaryValue}>{firstName}</Text>
+                    </View>
+
+                    <GlassInput
+                      label="Last Name (Optional)"
+                      placeholder="Doe"
+                      value={lastName}
+                      onChangeText={setLastName}
+                      autoCapitalize="words"
+                      autoComplete="family-name"
+                      textContentType="familyName"
+                      autoFocus
+                    />
+                    <Text style={styles.helperText}>
+                      You can skip this if you prefer
+                    </Text>
+                  </>
+                )}
+
+                <View style={styles.buttonContainer}>
+                  {step > 1 && (
+                    <GlassButton
+                      title="Back"
+                      variant="secondary"
+                      size="large"
+                      onPress={handleBack}
+                      disabled={loading}
+                      style={styles.backButton}
+                    />
+                  )}
+                  <GlassButton
+                    title={step === 2 ? 'Complete' : 'Continue'}
+                    variant="primary"
+                    size="large"
+                    onPress={handleContinue}
+                    disabled={loading || (step === 1 && firstName.trim().length < 3)}
+                    loading={loading}
+                    style={[styles.continueButton, step === 1 && styles.fullWidthButton]}
+                  />
+                </View>
+
+                {step === 2 && (
+                  <Text style={styles.skipText}>
+                    You can always update this later in your profile
+                  </Text>
+                )}
+              </View>
+            </GlassCard>
+          </Animated.View>
+
+          {/* Features Preview */}
+          <View style={styles.featuresContainer}>
+            <Text style={styles.featuresTitle}>What you'll get:</Text>
+            <View style={styles.featuresList}>
+              <FeatureItem icon="eye" text="AI-powered vision assistance" />
+              <FeatureItem icon="sparkles" text="Personalized experience" />
+              <FeatureItem icon="shield-checkmark" text="Secure & private" />
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </AnimatedBackground>
+  );
+}
+
+function FeatureItem({ icon, text }: { icon: string; text: string }) {
+  return (
+    <View style={styles.featureItem}>
+      <View style={styles.featureIconContainer}>
+        <AppIcon name={icon as any} size={20} color={SpectraColors.primary.main} />
+      </View>
+      <Text style={styles.featureText}>{text}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 40,
+  },
+  header: {
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  logoContainer: {
+    marginBottom: 16,
+  },
+  welcomeText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: SpectraColors.primary.main,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+  },
+  title: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: SpectraColors.text.primary,
+    marginBottom: 8,
+    textAlign: 'center',
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: SpectraColors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  progressContainer: {
+    marginBottom: 24,
+  },
+  progressBar: {
+    height: 6,
+    backgroundColor: SpectraColors.surface.accent,
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: SpectraColors.primary.main,
+    borderRadius: 3,
+  },
+  progressText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: SpectraColors.text.light,
+    textAlign: 'center',
+  },
+  card: {
+    padding: 0,
+    marginBottom: 32,
+  },
+  cardContent: {
+    padding: 24,
+  },
+  iconContainer: {
+    alignSelf: 'center',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: SpectraColors.primary.main,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  helperText: {
+    fontSize: 13,
+    color: SpectraColors.text.light,
+    textAlign: 'center',
+    marginTop: -8,
+    marginBottom: 16,
+  },
+  summaryContainer: {
+    backgroundColor: SpectraColors.surface.accent,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: SpectraColors.text.light,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  summaryValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: SpectraColors.text.primary,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  backButton: {
+    flex: 1,
+  },
+  continueButton: {
+    flex: 1,
+  },
+  fullWidthButton: {
+    flex: 1,
+  },
+  skipText: {
+    fontSize: 12,
+    color: SpectraColors.text.light,
+    textAlign: 'center',
+    marginTop: 16,
+    lineHeight: 18,
+  },
+  featuresContainer: {
+    marginTop: 8,
+  },
+  featuresTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: SpectraColors.text.secondary,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  featuresList: {
+    gap: 12,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    padding: 12,
+    borderRadius: 12,
+    gap: 12,
+  },
+  featureIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  featureText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: SpectraColors.text.primary,
+    flex: 1,
+  },
+});

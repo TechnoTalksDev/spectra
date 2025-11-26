@@ -13,10 +13,9 @@ import { router } from 'expo-router';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
+  withTiming,
   withDelay,
-  FadeIn,
-  FadeOut,
+  Easing,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { AnimatedBackground } from '@/components/ui/animated-background';
@@ -37,24 +36,22 @@ export default function Page() {
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Animations
-  const cardTranslateY = useSharedValue(100);
+  // Animations (fade-only to avoid bouncy spring motion)
   const cardOpacity = useSharedValue(0);
-  const titleScale = useSharedValue(0.8);
+  const titleOpacity = useSharedValue(0);
 
   useEffect(() => {
-    cardTranslateY.value = withDelay(100, withSpring(0, { damping: 15 }));
-    cardOpacity.value = withDelay(100, withSpring(1));
-    titleScale.value = withDelay(200, withSpring(1, { damping: 12 }));
+    const timingConfig = { duration: 350, easing: Easing.out(Easing.cubic) };
+    cardOpacity.value = withDelay(100, withTiming(1, timingConfig));
+    titleOpacity.value = withDelay(200, withTiming(1, timingConfig));
   }, []);
 
   const cardAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: cardTranslateY.value }],
     opacity: cardOpacity.value,
   }));
 
   const titleAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: titleScale.value }],
+    opacity: titleOpacity.value,
   }));
 
   const onSignUpPress = async () => {
@@ -97,6 +94,10 @@ export default function Page() {
     try {
       await verifyOtp({ email, token });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      // After successful verification, redirect to onboarding
+      // The protected layout will handle the redirect
+      router.replace('/(protected)/onboarding');
     } catch (err: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', err.message || 'Invalid verification code');
@@ -126,7 +127,7 @@ export default function Page() {
               </Text>
             </Animated.View>
 
-            <Animated.View entering={FadeIn} exiting={FadeOut}>
+          <Animated.View>
               <GlassCard variant="surface" style={styles.card}>
                 <View style={styles.cardContent}>
                   <View style={styles.iconContainer}>
