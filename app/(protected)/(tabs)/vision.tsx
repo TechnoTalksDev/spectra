@@ -111,7 +111,7 @@ export default function VisionPage() {
         
         // Send to GPT Realtime if session is active
         if (isSessionActive) {
-          console.log('[Auto-Snapshot] Sending to GPT Realtime...');
+          //console.log('[Auto-Snapshot] Sending to GPT Realtime...');
           await sendImageOverDataChannel(photo.base64);
         }
         
@@ -165,43 +165,33 @@ export default function VisionPage() {
     try {
       const message = JSON.parse(event.data);
       const { type } = message;
-      
-      console.log('[OpenAI Event]', type, message);
 
       switch (type) {
         case 'session.created':
-          console.log('[Session] Created successfully');
-          console.log('[Session] Model:', message.session?.model);
-          console.log('[Session] Instructions already configured via ephemeral token');
           // No need to send session.update - configuration was set during ephemeral token request
           break;
         
         case 'session.updated':
-          console.log('[Session] Updated:', message);
           break;
 
         case 'input_audio_buffer.speech_started':
-          console.log('[Audio] Speech started');
+          console.log('[User] Started speaking');
           break;
 
         case 'input_audio_buffer.speech_stopped':
-          console.log('[Audio] Speech stopped');
+          console.log('[User] Stopped speaking');
           break;
 
         case 'conversation.item.created':
-          console.log('[Conversation] Item created:', message);
           break;
 
         case 'response.created':
-          console.log('[Response] Created:', message);
           break;
 
         case 'response.done':
-          console.log('[Response] Done:', message);
           // Track token usage
           if (message.response?.usage) {
             const usage = message.response.usage;
-            console.log('[Tokens] Full usage object:', JSON.stringify(usage, null, 2));
             
             // Track total input tokens
             if (usage.input_tokens) {
@@ -220,37 +210,52 @@ export default function VisionPage() {
               if (details.cached_tokens) {
                 cachedInputTokensRef.current += details.cached_tokens;
               }
-              console.log('[Tokens] Input breakdown - Audio:', details.audio_tokens || 0, '| Text:', details.text_tokens || 0, '| Cached:', details.cached_tokens || 0);
             }
             
             // Track output tokens
             if (usage.output_tokens) {
               totalOutputTokensRef.current += usage.output_tokens;
             }
-            
-            console.log('[Tokens] Cumulative - Total Input:', totalInputTokensRef.current, '| Output:', totalOutputTokensRef.current);
           }
           break;
 
         case 'response.audio.delta':
           // Audio is automatically played through WebRTC audio track
-          console.log('[Audio] Delta received');
           break;
 
         case 'response.audio_transcript.delta':
-          console.log('[Transcript Delta]', message.delta);
+        case 'response.output_audio_transcript.delta':
+          // Azure uses output_audio_transcript instead of audio_transcript
           break;
 
         case 'response.audio_transcript.done':
-          console.log('[Transcript Done]', message.transcript);
+        case 'response.output_audio_transcript.done':
+          // Agent's response transcript (Azure uses output_audio_transcript)
+          if (message.transcript) {
+            console.log('[Agent]:', message.transcript);
+          }
           break;
 
         case 'response.text.delta':
-          console.log('[Text Delta]', message.delta);
           break;
 
         case 'response.text.done':
-          console.log('[Text Done]', message.text);
+          break;
+        
+        // Azure-specific events
+        case 'input_audio_buffer.committed':
+        case 'conversation.item.added':
+        case 'conversation.item.done':
+        case 'conversation.item.truncated':
+        case 'response.output_item.added':
+        case 'response.output_item.done':
+        case 'response.content_part.added':
+        case 'response.content_part.done':
+        case 'response.output_audio.done':
+        case 'output_audio_buffer.started':
+        case 'output_audio_buffer.stopped':
+        case 'output_audio_buffer.cleared':
+          // Silence these Azure-specific events
           break;
 
         case 'error':
@@ -259,7 +264,9 @@ export default function VisionPage() {
           break;
 
         default:
-          console.log('[Event]', type, message);
+          // Debug: log all unhandled events to discover what's being sent
+          console.log('[Unhandled Event]:', type);
+          break;
       }
     } catch (err) {
       console.error('[Event Parse Error]', err);
@@ -548,10 +555,10 @@ export default function VisionPage() {
         },
       };
 
-      console.log('[Sending] Image event to GPT Realtime (size: ' + (base64Image.length / 1024).toFixed(2) + ' KB)');
+      console.log('[Auto Snapshot] Sending Image event to GPT Realtime (size: ' + (base64Image.length / 1024).toFixed(2) + ' KB)');
       dc.send(JSON.stringify(event));
       imagesSentRef.current += 1;
-      console.log('[Sent] Image event successfully (Total images sent:', imagesSentRef.current, ')');
+      console.log('[Auto-Snapshot] Image event successfully (Total images sent:', imagesSentRef.current, ')');
 
       // // Wait before triggering response to ensure image is processed
       // await new Promise(resolve => setTimeout(resolve, 500));
