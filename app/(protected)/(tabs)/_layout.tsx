@@ -4,6 +4,7 @@ import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
 import React from "react";
 import { Animated, StyleSheet, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabsLayout() {
   const { colors, isDark } = useTheme();
@@ -50,6 +51,8 @@ export default function TabsLayout() {
   };
 
   const CustomTabBar = ({ state, descriptors, navigation }: any) => {
+    const insets = useSafeAreaInsets();
+    
     return (
       <View style={styles.tabBarContainer}>
         <BlurView
@@ -64,6 +67,7 @@ export default function TabsLayout() {
               styles.tabBar,
               {
                 borderTopColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)",
+                paddingBottom: Math.max(insets.bottom, 28),
               },
             ]}
           >
@@ -194,8 +198,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    height: 88,
-    paddingBottom: 28,
+    minHeight: 60,
     paddingTop: 12,
     borderTopWidth: 0.5,
     position: "relative",

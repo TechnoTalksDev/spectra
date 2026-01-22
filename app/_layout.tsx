@@ -5,6 +5,7 @@ import * as SplashScreen from "expo-splash-screen";
 
 import { useSupabase } from "@/hooks/useSupabase";
 import { SupabaseProvider } from "@/providers/supabase-provider";
+import { ProfileProvider } from "@/providers/profile-provider";
 import { ThemeProvider } from "@/context/theme-context";
 import { PortalHost } from '@rn-primitives/portal';
 
@@ -20,10 +21,12 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   return (
     <SupabaseProvider>
-      <ThemeProvider>
-        <RootNavigator />
-        <PortalHost />
-      </ThemeProvider>
+      <ProfileProvider>
+        <ThemeProvider>
+          <RootNavigator />
+          <PortalHost />
+        </ThemeProvider>
+      </ProfileProvider>
     </SupabaseProvider>
   );
 }

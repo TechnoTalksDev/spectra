@@ -10,11 +10,25 @@ export const useSignUp = () => {
     email: string;
     password: string;
   }) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: undefined, // No redirect needed for OTP verification in mobile
+      },
     });
-    if (error) throw error;
+    
+    if (error) {
+      console.error('Signup error details:', {
+        message: error.message,
+        status: error.status,
+        code: error.code,
+        name: error.name,
+      });
+      throw error;
+    }
+    
+    return data;
   };
 
   const verifyOtp = async ({

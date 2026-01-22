@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
-import { Stack, useRouter, useSegments } from "expo-router";
-import { useSupabase } from "@/hooks/useSupabase";
-import { useProfile } from "@/hooks/useProfile";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
-import { SpectraColors } from "@/constants/theme";
 import { AnimatedBackground } from "@/components/ui/animated-background";
+import { SpectraColors } from "@/constants/theme";
+import { useProfile } from "@/hooks/useProfile";
+import { useSupabase } from "@/hooks/useSupabase";
+import { Stack, useRouter, useSegments } from "expo-router";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 export default function ProtectedLayout() {
   const { session, isLoaded: authLoaded } = useSupabase();
@@ -14,30 +14,50 @@ export default function ProtectedLayout() {
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    if (!authLoaded) return;
+    console.log('[Protected Layout] useEffect triggered', {
+      authLoaded,
+      hasSession: !!session,
+      profileLoading,
+      hasProfile,
+      segments,
+      profile,
+    });
+
+    if (!authLoaded) {
+      console.log('[Protected Layout] Auth not loaded yet, waiting...');
+      return;
+    }
 
     // If no session, redirect to sign-in
     if (!session) {
+      console.log('[Protected Layout] No session, redirecting to sign-in');
       router.replace("/(public)/sign-in");
       return;
     }
 
     // Wait for profile to load
-    if (profileLoading) return;
+    if (profileLoading) {
+      console.log('[Protected Layout] Profile still loading, waiting...');
+      return;
+    }
 
     // If profile doesn't exist and not on onboarding page, redirect to onboarding
     const inOnboarding = segments[segments.length - 1] === "onboarding";
-    const inEditProfile = segments[segments.length - 1] === "edit-profile";
+    console.log('[Protected Layout] Navigation check:', { hasProfile, inOnboarding });
     
-    if (!hasProfile && !inOnboarding && !inEditProfile) {
+    if (!hasProfile && !inOnboarding) {
+      console.log('[Protected Layout] No profile and not on onboarding, redirecting to onboarding');
       router.replace("/(protected)/onboarding");
     } else if (hasProfile && inOnboarding) {
       // If profile exists and somehow on onboarding, redirect to tabs
+      console.log('[Protected Layout] Profile exists and on onboarding, redirecting to tabs!');
       router.replace("/(protected)/(tabs)");
+    } else {
+      console.log('[Protected Layout] No redirect needed');
     }
 
     setIsChecking(false);
-  }, [authLoaded, session, profileLoading, hasProfile, segments]);
+  }, [authLoaded, session, profileLoading, hasProfile, segments, profile]);
 
   // Show loading screen while checking auth and profile status
   if (!authLoaded || profileLoading || isChecking) {

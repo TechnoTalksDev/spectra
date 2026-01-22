@@ -55,7 +55,7 @@ export default function HelpSupportPage() {
 
   const handleEmailSupport = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const email = 'naman@spectra.com';
+    const email = 'saravana@spectra.com';
     const subject = 'Spectra Support Request';
     const url = `mailto:${email}?subject=${encodeURIComponent(subject)}`;
     
@@ -64,10 +64,10 @@ export default function HelpSupportPage() {
       if (canOpen) {
         await Linking.openURL(url);
       } else {
-        Alert.alert('Email Not Available', 'Please email us at naman@spectra.com');
+        Alert.alert('Email Not Available', 'Please email us at spectra@spectra.com');
       }
     } catch (error) {
-      Alert.alert('Contact Support', 'Please reach out to us at:\nnaman@spectra.com');
+      Alert.alert('Contact Support', 'Please reach out to us at:\nspectra@spectra.com');
     }
   };
 
@@ -120,7 +120,7 @@ export default function HelpSupportPage() {
             onPress={handleEmailSupport}
             style={styles.contactButton}
           />
-          <Text style={styles.contactEmail}>naman@spectra.com</Text>
+          <Text style={styles.contactEmail}>saravana@spectra.com</Text>
         </GlassCard>
 
         {/* Quick Actions */}

@@ -1,33 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import { AnimatedBackground } from '@/components/ui/animated-background';
+import { AppIcon } from '@/components/ui/app-icon';
+import { GlassButton } from '@/components/ui/glass-button';
+import { GlassCard } from '@/components/ui/glass-card';
+import { GlassInput } from '@/components/ui/glass-input';
+import { SpectraLogo } from '@/components/ui/spectra-logo';
+import { SpectraColors } from '@/constants/theme';
+import { useProfile } from '@/hooks/useProfile';
+import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  Alert,
+  Dimensions,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
-  Dimensions,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
-import { router } from 'expo-router';
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
-  withSpring,
   Easing,
   interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
-import { AnimatedBackground } from '@/components/ui/animated-background';
-import { GlassInput } from '@/components/ui/glass-input';
-import { GlassButton } from '@/components/ui/glass-button';
-import { GlassCard } from '@/components/ui/glass-card';
-import { SpectraLogo } from '@/components/ui/spectra-logo';
-import { AppIcon } from '@/components/ui/app-icon';
-import { SpectraColors } from '@/constants/theme';
-import { useProfile } from '@/hooks/useProfile';
 
 const { width } = Dimensions.get('window');
 
@@ -107,15 +107,25 @@ export default function OnboardingPage() {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      await createProfile({
+      console.log('[Onboarding] Creating profile with:', {
+        first_name: firstName.trim(),
+        last_name: lastName.trim() || undefined,
+      });
+      
+      const result = await createProfile({
         first_name: firstName.trim(),
         last_name: lastName.trim() || undefined,
       });
 
+      console.log('[Onboarding] Profile created successfully:', result);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
-      // Navigate to the main app
-      router.replace('/(protected)/(tabs)');
+      // Small delay to ensure profile state propagates, then navigate
+      console.log('[Onboarding] Profile created, navigating to tabs...');
+      setTimeout(() => {
+        console.log('[Onboarding] Executing navigation to tabs');
+        router.replace('/(protected)/(tabs)');
+      }, 100);
     } catch (err: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', err.message || 'Failed to create profile. Please try again.');

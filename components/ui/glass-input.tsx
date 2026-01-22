@@ -1,14 +1,13 @@
+import { useTheme } from '@/context/theme-context';
+import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import {
-  TextInput,
-  View,
-  Text,
   StyleSheet,
+  Text,
+  TextInput,
   TextInputProps,
-  TouchableOpacity,
+  View
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
-import { useTheme } from '@/context/theme-context';
 
 interface GlassInputProps extends TextInputProps {
   label?: string;
@@ -52,12 +51,12 @@ export function GlassInput({
         style={[
           styles.inputContainer,
           {
-            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.7)',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(230, 217, 242, 0.5)',
+            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#ffffff',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#e0e0e0',
           },
           isFocused && {
             borderColor: colors.primary.main,
-            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.9)',
+            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#ffffff',
           },
           error && styles.inputContainerError,
         ]}
@@ -65,7 +64,8 @@ export function GlassInput({
         {leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
         <TextInput
           style={[styles.input, { color: colors.text.primary }, style]}
-          placeholderTextColor={colors.text.light}
+          placeholderTextColor={isDark ? colors.text.light : '#444444'}
+          underlineColorAndroid="transparent"
           onFocus={handleFocus}
           onBlur={handleBlur}
           {...props}
