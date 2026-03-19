@@ -34,7 +34,7 @@
 3. **Start the Expo development server**
 
    ```bash
-   bunxx expo start
+   bunx expo start
    ```
 
 ## Architecture
@@ -102,11 +102,3 @@ See [UI Components Documentation](./docs/UI_COMPONENTS.md) for detailed usage.
 - [Expo](https://docs.expo.dev/versions/latest/)
 - [Supabase](https://supabase.com/docs)
 - [React Native Reanimated](https://docs.swmansion.com/react-native-reanimated/)
-
-## Contributing
-
-This is a student project for vision-impaired accessibility. Contributions are welcome!
-
-## License
-
-MIT
