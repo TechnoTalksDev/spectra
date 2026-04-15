@@ -1,41 +1,42 @@
 {
   "expo": {
-    "name": "expo-supabase-starter",
-    "slug": "expo-supabase-starter",
+    "name": "spectra",
+    "slug": "spectra",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "expo-supabase-starter",
+    "scheme": "spectra",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "platforms": [
       "ios",
       "android"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.flemingvincent.expo-supabase-starter"
+      "bundleIdentifier": "me.chandanc.spectra"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
-      "package": "com.flemingvincent.exposupabasestarter"
+      "package": "me.chandanc.me.exposupabasestarter"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-icon.png",
+          "image": "./assets/adaptive-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      "expo-font",
+      "expo-image",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
