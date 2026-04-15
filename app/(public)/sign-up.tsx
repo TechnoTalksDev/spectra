@@ -1,42 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import { AnimatedBackground } from "@/components/ui/animated-background";
+import { GlassButton } from "@/components/ui/glass-button";
+import { GlassInput } from "@/components/ui/glass-input";
+import { SpectraColors } from "@/constants/theme";
+import { useSignUp } from "@/hooks/useSignUp";
+import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
-  Alert,
-} from 'react-native';
-import { router } from 'expo-router';
+  View,
+} from "react-native";
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
   Easing,
-} from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
-import { AnimatedBackground } from '@/components/ui/animated-background';
-import { GlassInput } from '@/components/ui/glass-input';
-import { GlassButton } from '@/components/ui/glass-button';
-import { GlassCard } from '@/components/ui/glass-card';
-import { SpectraLogo } from '@/components/ui/spectra-logo';
-import { SpectraColors } from '@/constants/theme';
-import { useSignUp } from '@/hooks/useSignUp';
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from "react-native-reanimated";
 
 export default function Page() {
   const { isLoaded, signUp, verifyOtp } = useSignUp();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [pendingVerification, setPendingVerification] = useState(false);
-  const [token, setToken] = useState('');
+  const [token, setToken] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Animations (fade-only to avoid bouncy spring motion)
   const cardOpacity = useSharedValue(0);
   const titleOpacity = useSharedValue(0);
 
@@ -58,13 +55,13 @@ export default function Page() {
     if (!isLoaded || !email || !password) return;
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert("Error", "Passwords do not match");
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      Alert.alert("Error", "Password must be at least 6 characters");
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
@@ -78,7 +75,10 @@ export default function Page() {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', err.message || 'Failed to sign up. Please try again.');
+      Alert.alert(
+        "Error",
+        err.message || "Failed to sign up. Please try again.",
+      );
       console.error(JSON.stringify(err, null, 2));
     } finally {
       setLoading(false);
@@ -94,13 +94,10 @@ export default function Page() {
     try {
       await verifyOtp({ email, token });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
-      // After successful verification, redirect to onboarding
-      // The protected layout will handle the redirect
-      router.replace('/(protected)/onboarding');
+      router.replace("/(protected)/onboarding");
     } catch (err: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', err.message || 'Invalid verification code');
+      Alert.alert("Error", err.message || "Invalid verification code");
       console.error(JSON.stringify(err, null, 2));
     } finally {
       setLoading(false);
@@ -111,7 +108,7 @@ export default function Page() {
     return (
       <AnimatedBackground>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.container}
         >
           <ScrollView
@@ -122,52 +119,47 @@ export default function Page() {
             <Animated.View style={[styles.header, titleAnimatedStyle]}>
               <Text style={styles.title}>Check Your Email</Text>
               <Text style={styles.subtitle}>
-                We sent a verification code to{'\n'}
+                We sent a verification code to{"\n"}
                 <Text style={styles.emailText}>{email}</Text>
               </Text>
             </Animated.View>
 
-          <Animated.View>
-              <GlassCard variant="surface" style={styles.card}>
-                <View style={styles.cardContent}>
-                  <View style={styles.iconContainer}>
-                    <Text style={styles.icon}>✉️</Text>
-                  </View>
+            <Animated.View style={cardAnimatedStyle}>
+              <View style={[styles.cardContent, styles.verificationContent]}>
+                <GlassInput
+                  label="Verification Code"
+                  placeholder="Enter 6-digit code"
+                  value={token}
+                  onChangeText={setToken}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                />
 
-                  <GlassInput
-                    label="Verification Code"
-                    placeholder="Enter 6-digit code"
-                    value={token}
-                    onChangeText={setToken}
-                    keyboardType="number-pad"
-                    maxLength={6}
-                  />
+                <GlassButton
+                  title="Verify Email"
+                  variant="primary"
+                  size="large"
+                  onPress={onVerifyPress}
+                  disabled={!token || token.length !== 6 || loading}
+                  loading={loading}
+                  style={styles.verifyButton}
+                />
 
-                  <GlassButton
-                    title="Verify Email"
-                    variant="primary"
-                    size="large"
-                    onPress={onVerifyPress}
-                    disabled={!token || token.length !== 6 || loading}
-                    loading={loading}
-                    style={styles.verifyButton}
-                  />
-
-                  <TouchableOpacity
-                    onPress={async () => {
-                      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      // TODO: Implement resend
-                      Alert.alert('Coming Soon', 'Resend feature coming soon!');
-                    }}
-                    style={styles.resendContainer}
-                  >
-                    <Text style={styles.resendText}>
-                      Didn't receive the code?{' '}
-                      <Text style={styles.resendLink}>Resend</Text>
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </GlassCard>
+                <TouchableOpacity
+                  onPress={async () => {
+                    await Haptics.impactAsync(
+                      Haptics.ImpactFeedbackStyle.Light,
+                    );
+                    Alert.alert("Coming Soon", "Resend feature coming soon!");
+                  }}
+                  style={styles.resendContainer}
+                >
+                  <Text style={styles.resendText}>
+                    Didn't receive the code?{" "}
+                    <Text style={styles.resendLink}>Resend</Text>
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </Animated.View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -178,7 +170,7 @@ export default function Page() {
   return (
     <AnimatedBackground>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
       >
         <ScrollView
@@ -197,84 +189,82 @@ export default function Page() {
               <Text style={styles.backButtonText}>←</Text>
             </TouchableOpacity>
             <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join Spectra and experience AI-powered vision</Text>
+            <Text style={styles.subtitle}>
+              Join Spectra and experience AI-powered vision
+            </Text>
           </Animated.View>
 
           <Animated.View style={cardAnimatedStyle}>
-            <GlassCard variant="surface" style={styles.card}>
-              <View style={styles.cardContent}>
-                <View style={styles.iconContainer}>
-                  <SpectraLogo size={48} />
-                </View>
+            <View style={styles.cardContent}>
+              <GlassInput
+                label="Email Address"
+                placeholder="your@email.com"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+                textContentType="emailAddress"
+              />
 
-                <GlassInput
-                  label="Email Address"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  autoComplete="email"
-                  textContentType="emailAddress"
-                />
+              <GlassInput
+                label="Password"
+                placeholder="At least 6 characters"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoComplete="password-new"
+                textContentType="newPassword"
+              />
 
-                <GlassInput
-                  label="Password"
-                  placeholder="At least 6 characters"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  autoComplete="password-new"
-                  textContentType="newPassword"
-                />
+              <GlassInput
+                label="Confirm Password"
+                placeholder="Re-enter your password"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+                autoComplete="password-new"
+                textContentType="newPassword"
+              />
 
-                <GlassInput
-                  label="Confirm Password"
-                  placeholder="Re-enter your password"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry
-                  autoComplete="password-new"
-                  textContentType="newPassword"
-                />
+              <GlassButton
+                title="Create Account"
+                variant="primary"
+                size="large"
+                onPress={onSignUpPress}
+                disabled={!email || !password || !confirmPassword || loading}
+                loading={loading}
+                style={styles.signUpButton}
+              />
 
-                <GlassButton
-                  title="Create Account"
-                  variant="primary"
-                  size="large"
-                  onPress={onSignUpPress}
-                  disabled={!email || !password || !confirmPassword || loading}
-                  loading={loading}
-                  style={styles.signUpButton}
-                />
-
-                <View style={styles.termsContainer}>
-                  <Text style={styles.termsText}>
-                    By creating an account, you agree to our{' '}
-                    <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
-                    <Text style={styles.termsLink}>Privacy Policy</Text>
-                  </Text>
-                </View>
-
-                <View style={styles.divider}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>or</Text>
-                  <View style={styles.dividerLine} />
-                </View>
-
-                <View style={styles.signInContainer}>
-                  <Text style={styles.signInText}>Already have an account? </Text>
-                  <TouchableOpacity
-                    onPress={async () => {
-                      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      router.replace('/sign-in');
-                    }}
-                  >
-                    <Text style={styles.signInLink}>Sign In</Text>
-                  </TouchableOpacity>
-                </View>
+              <View style={styles.termsContainer}>
+                <Text style={styles.termsText}>
+                  By creating an account, you agree to our{" "}
+                  <Text style={styles.termsLink}>Terms of Service</Text> and{" "}
+                  <Text style={styles.termsLink}>Privacy Policy</Text>
+                </Text>
               </View>
-            </GlassCard>
+
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <View style={styles.signInContainer}>
+                <Text style={styles.signInText}>Already have an account? </Text>
+                <TouchableOpacity
+                  onPress={async () => {
+                    await Haptics.impactAsync(
+                      Haptics.ImpactFeedbackStyle.Light,
+                    );
+                    router.replace("/sign-in");
+                  }}
+                >
+                  <Text style={styles.signInLink}>Sign In</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -299,9 +289,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 24,
   },
   backButtonText: {
@@ -310,51 +300,33 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 42,
-    fontWeight: '800',
+    fontWeight: "800",
     color: SpectraColors.primary.main,
     marginBottom: 8,
     letterSpacing: -1,
   },
   subtitle: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
     color: SpectraColors.text.secondary,
     lineHeight: 24,
   },
   emailText: {
-    fontWeight: '700',
+    fontWeight: "700",
     color: SpectraColors.primary.main,
   },
-  card: {
+  cardContent: {
     padding: 0,
   },
-  cardContent: {
-    padding: 24,
-  },
-  iconContainer: {
-    alignSelf: 'center',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 32,
-    shadowColor: SpectraColors.primary.main,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  icon: {
-    fontSize: 40,
+  verificationContent: {
+    paddingTop: 24,
   },
   signUpButton: {
-    width: '100%',
+    width: "100%",
     marginBottom: 16,
   },
   verifyButton: {
-    width: '100%',
+    width: "100%",
     marginBottom: 24,
   },
   termsContainer: {
@@ -363,16 +335,16 @@ const styles = StyleSheet.create({
   termsText: {
     fontSize: 12,
     color: SpectraColors.text.light,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 18,
   },
   termsLink: {
     color: SpectraColors.primary.main,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 24,
   },
   dividerLine: {
@@ -383,13 +355,13 @@ const styles = StyleSheet.create({
   dividerText: {
     marginHorizontal: 16,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     color: SpectraColors.text.light,
   },
   signInContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
   },
   signInText: {
     fontSize: 14,
@@ -397,18 +369,18 @@ const styles = StyleSheet.create({
   },
   signInLink: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
     color: SpectraColors.primary.main,
   },
   resendContainer: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   resendText: {
     fontSize: 14,
     color: SpectraColors.text.secondary,
   },
   resendLink: {
-    fontWeight: '700',
+    fontWeight: "700",
     color: SpectraColors.primary.main,
   },
 });

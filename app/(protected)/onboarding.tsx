@@ -1,14 +1,12 @@
-import { AnimatedBackground } from '@/components/ui/animated-background';
-import { AppIcon } from '@/components/ui/app-icon';
-import { GlassButton } from '@/components/ui/glass-button';
-import { GlassCard } from '@/components/ui/glass-card';
-import { GlassInput } from '@/components/ui/glass-input';
-import { SpectraLogo } from '@/components/ui/spectra-logo';
-import { SpectraColors } from '@/constants/theme';
-import { useProfile } from '@/hooks/useProfile';
-import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { AnimatedBackground } from "@/components/ui/animated-background";
+import { AppIcon } from "@/components/ui/app-icon";
+import { GlassButton } from "@/components/ui/glass-button";
+import { GlassInput } from "@/components/ui/glass-input";
+import { SpectraColors } from "@/constants/theme";
+import { useProfile } from "@/hooks/useProfile";
+import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -18,7 +16,7 @@ import {
   StyleSheet,
   Text,
   View,
-} from 'react-native';
+} from "react-native";
 import Animated, {
   Easing,
   interpolate,
@@ -27,16 +25,16 @@ import Animated, {
   withDelay,
   withSpring,
   withTiming,
-} from 'react-native-reanimated';
+} from "react-native-reanimated";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 export default function OnboardingPage() {
   const { createProfile } = useProfile();
-  
+
   const [step, setStep] = useState(1);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
 
   // Animations
@@ -72,24 +70,28 @@ export default function OnboardingPage() {
   const handleContinue = async () => {
     if (step === 1) {
       if (!firstName.trim()) {
-        Alert.alert('Required', 'Please enter your first name');
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        Alert.alert("Required", "Please enter your first name");
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Warning,
+        );
         return;
       }
 
       if (firstName.trim().length < 3) {
-        Alert.alert('Invalid', 'First name must be at least 3 characters');
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        Alert.alert("Invalid", "First name must be at least 3 characters");
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Warning,
+        );
         return;
       }
 
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      
+
       // Animate step transition
       cardOpacity.value = withTiming(0, { duration: 200 }, () => {
         cardOpacity.value = withTiming(1, { duration: 200 });
       });
-      
+
       setStep(2);
     } else if (step === 2) {
       await handleComplete();
@@ -98,7 +100,7 @@ export default function OnboardingPage() {
 
   const handleComplete = async () => {
     if (!firstName.trim()) {
-      Alert.alert('Required', 'Please enter your first name');
+      Alert.alert("Required", "Please enter your first name");
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
@@ -107,29 +109,32 @@ export default function OnboardingPage() {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      console.log('[Onboarding] Creating profile with:', {
+      console.log("[Onboarding] Creating profile with:", {
         first_name: firstName.trim(),
         last_name: lastName.trim() || undefined,
       });
-      
+
       const result = await createProfile({
         first_name: firstName.trim(),
         last_name: lastName.trim() || undefined,
       });
 
-      console.log('[Onboarding] Profile created successfully:', result);
+      console.log("[Onboarding] Profile created successfully:", result);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
+
       // Small delay to ensure profile state propagates, then navigate
-      console.log('[Onboarding] Profile created, navigating to tabs...');
+      console.log("[Onboarding] Profile created, navigating to tabs...");
       setTimeout(() => {
-        console.log('[Onboarding] Executing navigation to tabs');
-        router.replace('/(protected)/(tabs)');
+        console.log("[Onboarding] Executing navigation to tabs");
+        router.replace("/(protected)/(tabs)");
       }, 100);
     } catch (err: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', err.message || 'Failed to create profile. Please try again.');
-      console.error('Profile creation error:', err);
+      Alert.alert(
+        "Error",
+        err.message || "Failed to create profile. Please try again.",
+      );
+      console.error("Profile creation error:", err);
     } finally {
       setLoading(false);
     }
@@ -137,39 +142,39 @@ export default function OnboardingPage() {
 
   const handleBack = async () => {
     if (step === 1) return;
-    
+
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     // Animate step transition
     cardOpacity.value = withTiming(0, { duration: 200 }, () => {
       cardOpacity.value = withTiming(1, { duration: 200 });
     });
-    
+
     setStep(step - 1);
   };
 
   const getStepIcon = () => {
-    if (step === 1) return 'person';
-    if (step === 2) return 'checkmark-circle';
-    return 'sparkles';
+    if (step === 1) return "person";
+    if (step === 2) return "checkmark-circle";
+    return "sparkles";
   };
 
   const getStepTitle = () => {
     if (step === 1) return "What's your name?";
-    if (step === 2) return 'Almost there!';
-    return 'Welcome!';
+    if (step === 2) return "Almost there!";
+    return "Welcome!";
   };
 
   const getStepSubtitle = () => {
-    if (step === 1) return 'Let us know what to call you';
-    if (step === 2) return 'Add a last name (optional)';
-    return 'Your profile is ready';
+    if (step === 1) return "Let us know what to call you";
+    if (step === 2) return "Add a last name (optional)";
+    return "Your profile is ready";
   };
 
   return (
     <AnimatedBackground>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
       >
         <ScrollView
@@ -179,10 +184,6 @@ export default function OnboardingPage() {
         >
           {/* Header */}
           <Animated.View style={[styles.header, titleAnimatedStyle]}>
-            <View style={styles.logoContainer}>
-              <SpectraLogo size={56} />
-            </View>
-            <Text style={styles.welcomeText}>Welcome to Spectra</Text>
             <Text style={styles.title}>{getStepTitle()}</Text>
             <Text style={styles.subtitle}>{getStepSubtitle()}</Text>
           </Animated.View>
@@ -190,89 +191,90 @@ export default function OnboardingPage() {
           {/* Progress Bar */}
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
-              <Animated.View style={[styles.progressFill, progressAnimatedStyle]} />
+              <Animated.View
+                style={[styles.progressFill, progressAnimatedStyle]}
+              />
             </View>
             <Text style={styles.progressText}>Step {step} of 2</Text>
           </View>
 
           {/* Card */}
           <Animated.View style={cardAnimatedStyle}>
-            <GlassCard variant="surface" style={styles.card}>
-              <View style={styles.cardContent}>
-                <View style={styles.iconContainer}>
-                  <AppIcon name={getStepIcon() as any} size={48} color={SpectraColors.primary.main} />
-                </View>
-
-                {step === 1 && (
-                  <>
-                    <GlassInput
-                      label="First Name"
-                      placeholder="John"
-                      value={firstName}
-                      onChangeText={setFirstName}
-                      autoCapitalize="words"
-                      autoComplete="given-name"
-                      textContentType="givenName"
-                      autoFocus
-                    />
-                    <Text style={styles.helperText}>
-                      Minimum 3 characters required
-                    </Text>
-                  </>
-                )}
-
-                {step === 2 && (
-                  <>
-                    <View style={styles.summaryContainer}>
-                      <Text style={styles.summaryLabel}>First Name</Text>
-                      <Text style={styles.summaryValue}>{firstName}</Text>
-                    </View>
-
-                    <GlassInput
-                      label="Last Name (Optional)"
-                      placeholder="Doe"
-                      value={lastName}
-                      onChangeText={setLastName}
-                      autoCapitalize="words"
-                      autoComplete="family-name"
-                      textContentType="familyName"
-                      autoFocus
-                    />
-                    <Text style={styles.helperText}>
-                      You can skip this if you prefer
-                    </Text>
-                  </>
-                )}
-
-                <View style={styles.buttonContainer}>
-                  {step > 1 && (
-                    <GlassButton
-                      title="Back"
-                      variant="secondary"
-                      size="large"
-                      onPress={handleBack}
-                      disabled={loading}
-                      style={styles.backButton}
-                    />
-                  )}
-                  <GlassButton
-                    title={step === 2 ? 'Complete' : 'Continue'}
-                    variant="primary"
-                    size="large"
-                    onPress={handleContinue}
-                    disabled={loading || (step === 1 && firstName.trim().length < 3)}
-                    loading={loading}
-                    style={[styles.continueButton, step === 1 && styles.fullWidthButton]}
+            <View style={styles.cardContent}>
+              {step === 1 && (
+                <>
+                  <GlassInput
+                    label="First Name"
+                    placeholder="John"
+                    value={firstName}
+                    onChangeText={setFirstName}
+                    autoCapitalize="words"
+                    autoComplete="given-name"
+                    textContentType="givenName"
+                    autoFocus
                   />
-                </View>
-
-                {step === 2 && (
-                  <Text style={styles.skipText}>
-                    You can always update this later in your profile
+                  <Text style={styles.helperText}>
+                    Minimum 3 characters required
                   </Text>
+                </>
+              )}
+
+              {step === 2 && (
+                <>
+                  <View style={styles.summaryContainer}>
+                    <Text style={styles.summaryLabel}>First Name</Text>
+                    <Text style={styles.summaryValue}>{firstName}</Text>
+                  </View>
+
+                  <GlassInput
+                    label="Last Name (Optional)"
+                    placeholder="Doe"
+                    value={lastName}
+                    onChangeText={setLastName}
+                    autoCapitalize="words"
+                    autoComplete="family-name"
+                    textContentType="familyName"
+                    autoFocus
+                  />
+                  <Text style={styles.helperText}>
+                    You can skip this if you prefer
+                  </Text>
+                </>
+              )}
+
+              <View style={styles.buttonContainer}>
+                {step > 1 && (
+                  <GlassButton
+                    title="Back"
+                    variant="secondary"
+                    size="large"
+                    onPress={handleBack}
+                    disabled={loading}
+                    style={styles.backButton}
+                  />
                 )}
+                <GlassButton
+                  title={step === 2 ? "Complete" : "Continue"}
+                  variant="primary"
+                  size="large"
+                  onPress={handleContinue}
+                  disabled={
+                    loading || (step === 1 && firstName.trim().length < 3)
+                  }
+                  loading={loading}
+                  style={[
+                    styles.continueButton,
+                    step === 1 && styles.fullWidthButton,
+                  ]}
+                />
               </View>
-            </GlassCard>
+
+              {step === 2 && (
+                <Text style={styles.skipText}>
+                  You can always update this later in your profile
+                </Text>
+              )}
+            </View>
           </Animated.View>
 
           {/* Features Preview */}
@@ -294,7 +296,11 @@ function FeatureItem({ icon, text }: { icon: string; text: string }) {
   return (
     <View style={styles.featureItem}>
       <View style={styles.featureIconContainer}>
-        <AppIcon name={icon as any} size={20} color={SpectraColors.primary.main} />
+        <AppIcon
+          name={icon as any}
+          size={20}
+          color={SpectraColors.primary.main}
+        />
       </View>
       <Text style={styles.featureText}>{text}</Text>
     </View>
@@ -308,37 +314,37 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 84,
     paddingBottom: 40,
   },
   header: {
     marginBottom: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   logoContainer: {
     marginBottom: 16,
   },
   welcomeText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: SpectraColors.primary.main,
     marginBottom: 8,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 1.5,
   },
   title: {
     fontSize: 36,
-    fontWeight: '800',
+    fontWeight: "800",
     color: SpectraColors.text.primary,
     marginBottom: 8,
-    textAlign: 'center',
+    textAlign: "center",
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
     color: SpectraColors.text.secondary,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 24,
   },
   progressContainer: {
@@ -348,46 +354,28 @@ const styles = StyleSheet.create({
     height: 6,
     backgroundColor: SpectraColors.surface.accent,
     borderRadius: 3,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginBottom: 8,
   },
   progressFill: {
-    height: '100%',
+    height: "100%",
     backgroundColor: SpectraColors.primary.main,
     borderRadius: 3,
   },
   progressText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: SpectraColors.text.light,
-    textAlign: 'center',
-  },
-  card: {
-    padding: 0,
-    marginBottom: 32,
+    textAlign: "center",
   },
   cardContent: {
-    padding: 24,
-  },
-  iconContainer: {
-    alignSelf: 'center',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: SpectraColors.primary.main,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 6,
+    padding: 0,
+    marginBottom: 32,
   },
   helperText: {
     fontSize: 13,
     color: SpectraColors.text.light,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: -8,
     marginBottom: 16,
   },
@@ -399,19 +387,19 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: SpectraColors.text.light,
     marginBottom: 4,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   summaryValue: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     color: SpectraColors.text.primary,
   },
   buttonContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   backButton: {
@@ -426,7 +414,7 @@ const styles = StyleSheet.create({
   skipText: {
     fontSize: 12,
     color: SpectraColors.text.light,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 16,
     lineHeight: 18,
   },
@@ -435,18 +423,18 @@ const styles = StyleSheet.create({
   },
   featuresTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: SpectraColors.text.secondary,
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   featuresList: {
     gap: 12,
   },
   featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
     padding: 12,
     borderRadius: 12,
     gap: 12,
@@ -455,13 +443,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   featureText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: SpectraColors.text.primary,
     flex: 1,
   },

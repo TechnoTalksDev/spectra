@@ -1,35 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import { AnimatedBackground } from "@/components/ui/animated-background";
+import { GlassButton } from "@/components/ui/glass-button";
+import { GlassInput } from "@/components/ui/glass-input";
+import { SpectraColors } from "@/constants/theme";
+import { useSignIn } from "@/hooks/useSignIn";
+import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
-import { router } from 'expo-router';
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
-  Easing,
-} from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
-import { AnimatedBackground } from '@/components/ui/animated-background';
-import { GlassInput } from '@/components/ui/glass-input';
-import { GlassButton } from '@/components/ui/glass-button';
-import { GlassCard } from '@/components/ui/glass-card';
-import { SpectraLogo } from '@/components/ui/spectra-logo';
-import { SpectraColors } from '@/constants/theme';
-import { useSignIn } from '@/hooks/useSignIn';
+    Easing,
+    useAnimatedStyle,
+    useSharedValue,
+    withDelay,
+    withTiming,
+} from "react-native-reanimated";
 
 export default function Page() {
   const { signInWithPassword, isLoaded } = useSignIn();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   // Animations (fade-only to avoid bouncy spring motion)
@@ -61,7 +59,10 @@ export default function Page() {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', err.message || 'Failed to sign in. Please try again.');
+      Alert.alert(
+        "Error",
+        err.message || "Failed to sign in. Please try again.",
+      );
       console.error(JSON.stringify(err, null, 2));
     } finally {
       setLoading(false);
@@ -71,7 +72,7 @@ export default function Page() {
   return (
     <AnimatedBackground>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
       >
         <ScrollView
@@ -91,78 +92,79 @@ export default function Page() {
               <Text style={styles.backButtonText}>←</Text>
             </TouchableOpacity>
             <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to continue your journey</Text>
+            <Text style={styles.subtitle}>
+              Sign in to continue your journey
+            </Text>
           </Animated.View>
 
           {/* Sign In Card */}
           <Animated.View style={cardAnimatedStyle}>
-            <GlassCard variant="surface" style={styles.card}>
-              <View style={styles.cardContent}>
-                <View style={styles.iconContainer}>
-                  <SpectraLogo size={48} />
-                </View>
+            <View style={styles.cardContent}>
+              <GlassInput
+                label="Email Address"
+                placeholder="your@email.com"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+                textContentType="emailAddress"
+              />
 
-                <GlassInput
-                  label="Email Address"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  autoComplete="email"
-                  textContentType="emailAddress"
-                />
+              <GlassInput
+                label="Password"
+                placeholder="••••••••"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoComplete="password"
+                textContentType="password"
+              />
 
-                <GlassInput
-                  label="Password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  autoComplete="password"
-                  textContentType="password"
-                />
+              <TouchableOpacity
+                onPress={async () => {
+                  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  // TODO: Implement forgot password
+                  Alert.alert(
+                    "Coming Soon",
+                    "Password reset feature coming soon!",
+                  );
+                }}
+                style={styles.forgotPassword}
+              >
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
 
+              <GlassButton
+                title="Sign In"
+                variant="primary"
+                size="large"
+                onPress={onSignInPress}
+                disabled={!email || !password || loading}
+                loading={loading}
+                style={styles.signInButton}
+              />
+
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <View style={styles.signUpContainer}>
+                <Text style={styles.signUpText}>Don't have an account? </Text>
                 <TouchableOpacity
                   onPress={async () => {
-                    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    // TODO: Implement forgot password
-                    Alert.alert('Coming Soon', 'Password reset feature coming soon!');
+                    await Haptics.impactAsync(
+                      Haptics.ImpactFeedbackStyle.Light,
+                    );
+                    router.replace("/sign-up");
                   }}
-                  style={styles.forgotPassword}
                 >
-                  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                  <Text style={styles.signUpLink}>Sign Up</Text>
                 </TouchableOpacity>
-
-                <GlassButton
-                  title="Sign In"
-                  variant="primary"
-                  size="large"
-                  onPress={onSignInPress}
-                  disabled={!email || !password || loading}
-                  loading={loading}
-                  style={styles.signInButton}
-                />
-
-                <View style={styles.divider}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>or</Text>
-                  <View style={styles.dividerLine} />
-                </View>
-
-                <View style={styles.signUpContainer}>
-                  <Text style={styles.signUpText}>Don't have an account? </Text>
-                  <TouchableOpacity
-                    onPress={async () => {
-                      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      router.replace('/sign-up');
-                    }}
-                  >
-                    <Text style={styles.signUpLink}>Sign Up</Text>
-                  </TouchableOpacity>
-                </View>
               </View>
-            </GlassCard>
+            </View>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -187,9 +189,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 24,
   },
   backButtonText: {
@@ -198,58 +200,38 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 42,
-    fontWeight: '800',
+    fontWeight: "800",
     color: SpectraColors.primary.main,
     marginBottom: 8,
     letterSpacing: -1,
   },
   subtitle: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
     color: SpectraColors.text.secondary,
-  },
-  card: {
-    padding: 0,
   },
   cardContent: {
     padding: 24,
-  },
-  iconContainer: {
-    alignSelf: 'center',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 32,
-    shadowColor: SpectraColors.primary.main,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  icon: {
-    fontSize: 40,
+    paddingHorizontal: 0,
   },
   forgotPassword: {
-    alignSelf: 'flex-end',
+    alignSelf: "flex-end",
     marginTop: -8,
     marginBottom: 24,
     padding: 8,
   },
   forgotPasswordText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: SpectraColors.primary.main,
   },
   signInButton: {
-    width: '100%',
+    width: "100%",
     marginBottom: 24,
   },
   divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 24,
   },
   dividerLine: {
@@ -260,13 +242,13 @@ const styles = StyleSheet.create({
   dividerText: {
     marginHorizontal: 16,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     color: SpectraColors.text.light,
   },
   signUpContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
   },
   signUpText: {
     fontSize: 14,
@@ -274,8 +256,7 @@ const styles = StyleSheet.create({
   },
   signUpLink: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
     color: SpectraColors.primary.main,
   },
 });
-

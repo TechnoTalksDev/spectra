@@ -133,7 +133,7 @@ export default function VisionPage() {
       setSnapshotCountdown((prev) => {
         if (prev <= 1) {
           takeAutoSnapshot();
-          return 5; // Reset countdown
+          return 10; // Reset countdown
         }
         return prev - 1;
       });
